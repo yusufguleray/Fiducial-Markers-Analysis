@@ -1,0 +1,20 @@
+%YAML:1.0
+## input files
+tagImageFile: "./TopoTag_4x4_square.png"            # [STRING] 
+tagModelFile: "./TopoTag_4x4_square_model.dat"      # [STRING]
+
+## tag setup
+tagBitSize: 4
+tagLength: 0.04465                                  # [DOUBLE] tag length of the white area, unit: m
+
+## camera calibration params
+cameraMatrix: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [917.347, 0, 647.297, 0, 917.271, 484.99, 0, 0, 1]
+distortionCoefficients: !!opencv-matrix
+   rows: 8
+   cols: 1
+   dt: d
+   data: [7.75017, 25.6757, -0.000163367, -1.82517e-005, 4.14361, 8.12583, 28.6256, 12.7099]

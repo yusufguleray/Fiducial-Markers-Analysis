@@ -1,0 +1,3 @@
+/home/yus/MasterThesis/OpenCVversionCheck/build/CMakeFiles/rebuild_cache.dir
+/home/yus/MasterThesis/OpenCVversionCheck/build/CMakeFiles/versionfinder.dir
+/home/yus/MasterThesis/OpenCVversionCheck/build/CMakeFiles/edit_cache.dir
