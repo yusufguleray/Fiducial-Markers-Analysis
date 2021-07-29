@@ -1,7 +1,0 @@
-cmake_minimum_required(VERSION 2.8)
-project( versionfinder )
-set("OpenCV_DIR" "/home/yus/Libraries/opencv-3.4.15/build/")
-find_package( OpenCV REQUIRED )
-include_directories( ${OpenCV_INCLUDE_DIRS} )
-add_executable( versionfinder versionfinder.cpp )
-target_link_libraries( versionfinder ${OpenCV_LIBS} )
