@@ -1,18 +1,20 @@
 import cv2
 import numpy as np
 import pyrealsense2 as rs
-import pyStag as stag
 import utils, detectors
 import time  #For calculating the time it takes to calculate
 
-is_april = True
-isAruCo = True
-isCharuco = True
-isStag = True
+is_april = 1
+isAruCo = 1
+isCharuco = 0
+isStag = 0
+
+is_visualize = True
 
 isTest = False
 
-calib_mtx, dist_coef = utils.getCalibData("realsense_d415_010721_2.npz")
+calib_file_name = "realsense_d415_010721_2.npz"
+calib_mtx, dist_coef = utils.getCalibData(calib_file_name)
 
 # Initialize communication with intel realsense
 pipeline = rs.pipeline()
@@ -21,13 +23,13 @@ realsense_cfg.enable_stream(rs.stream.color, 1280, 720, rs.format.rgb8, 6)
 pipeline.start(realsense_cfg)
 
 # Check communication
-print("Test data source...")
+print("Testing the connection with the camera...")
 try:
 	np.asanyarray(pipeline.wait_for_frames().get_color_frame().get_data())
 except:
-	raise Exception("Can't get rgb frame from data source")
+	raise Exception("Can't get rgb frame from camera")
 
-print("Connection is succesful!")
+print("Connection with the camera is succesful!")
 print("Press [ESC] to close the application")
 
 "--- Data for testing ---"
@@ -46,12 +48,13 @@ while True:
 	
 	" --- AprilTag --- "
 	if is_april == True:
-		img_rgb, april_list_tag, april_n_detections = detectors.april_detector(img_rgb, img_gray,
-												 calib_mtx, dist_coef, visualize=True, cube_color = (255,0,0))
-
+		img_rgb, april_list_tag = detectors.april_detector(img_rgb, img_gray,
+												 calib_mtx, dist_coef, visualize = is_visualize, cube_color = (255,0,0))
+		
+		#img_rgb = utils.draw_cube_list(img_rgb, april_list_tag, calib_mtx, dist_coef)
 	" --- ArUco --- "
 	if isAruCo == True:
-		img_rgb, aruco_list_tag, aruco_n_detections = detectors.aruco_detector(img_rgb, img_gray,
+		img_rgb, aruco_list_tag = detectors.aruco_detector(img_rgb, img_gray,
 										calib_mtx, dist_coef, visualize=True, cube_color = (0,0,0))
 
 	" --- CharUco --- "

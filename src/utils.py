@@ -65,6 +65,13 @@ def drawCube(img_rgb, rvecs, tvecs, mtx, dist, cube_color = (255, 0, 0), tag_siz
 
 	return img_rgb
 
+def draw_cube_list(img_rgb, detection_list, calib_mtx, dist_coef, tag_size =1, cube_color = (125,125,125), is_centered = True):
+	
+	for detection in detection_list:
+		img_rgb = drawCube(img_rgb, detection['rvec'], detection['tvec'], calib_mtx, dist_coef, cube_color, tag_size = tag_size, is_centered = True)
+	
+	return img_rgb
+
 def calibrator():
 	import cv2
 	import cv2.aruco as aruco
@@ -180,6 +187,8 @@ def getCalibData(filename):
 	with np.load(calibration_path) as X:
 		mtx, dist, _, _ = [X[i] for i in ('mtx', 'dist', 'rvecs', 'tvecs')]
 
+	print("The file used for the camera calibration :", calibration_path)
+
 	return mtx, dist
 
 def angle_error(v1, v2):
@@ -188,3 +197,79 @@ def angle_error(v1, v2):
     return np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
 
 # def pose_error(prevPose, curPose):
+
+
+def distance_matrix(A, B, squared=False):
+    """
+    Compute all pairwise distances between vectors in A and B.
+
+    Parameters
+    ----------
+    A : np.array
+        shape should be (M, K)
+    B : np.array
+        shape should be (N, K)
+
+    Returns
+    -------
+    D : np.array
+        A matrix D of shape (M, N).  Each entry in D i,j represnets the
+        distance between row i in A and row j in B.
+
+    See also
+    --------
+    A more generalized version of the distance matrix is available from
+    scipy (https://www.scipy.org) using scipy.spatial.distance_matrix,
+    which also gives a choice for p-norm.
+    """
+    M = A.shape[0]
+    N = B.shape[0]
+
+    assert A.shape[1] == B.shape[1], f"The number of components for vectors in A \
+        {A.shape[1]} does not match that of B {B.shape[1]}!"
+
+    A_dots = (A*A).sum(axis=1).reshape((M,1))*np.ones(shape=(1,N))
+    B_dots = (B*B).sum(axis=1)*np.ones(shape=(M,1))
+    D_squared =  A_dots + B_dots -2*A.dot(B.T)
+
+    if squared == False:
+        zero_mask = np.less(D_squared, 0.0)
+        D_squared[zero_mask] = 0.0
+        return np.sqrt(D_squared)
+
+    return D_squared
+
+def elementwise_distance(A, B, squared = False):
+	"""
+	Compute all elementwise distances between vectors in A and B.
+
+	Parameters
+	----------
+	A : np.array
+		shape should be (M, K)
+	B : np.array
+		shape should be (M, K)
+
+	Returns
+	-------
+	D : np.array
+		A matrix D of shape (M, 1).  Each entry in D i represnets the
+		distance between row i in A and row i in B.
+
+	"""
+
+	M = A.shape[0]
+	N = B.shape[0]
+
+	assert A.shape[0] == B.shape[0], f"The number of components for vectors in A \
+		{A.shape[1]} does not match that of B {B.shape[1]}!"
+
+	try:
+		D_squared = np.sum(np.square(A - B), axis = 1)
+	except:
+		D_squared = np.sum(np.square(A - B), axis = 0)
+	
+	if squared == False:
+		return np.sqrt(D_squared)
+
+	return D_squared
