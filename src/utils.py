@@ -187,7 +187,7 @@ def getCalibData(filename):
 	with np.load(calibration_path) as X:
 		mtx, dist, _, _ = [X[i] for i in ('mtx', 'dist', 'rvecs', 'tvecs')]
 
-	print("The file used for the camera calibration :", calibration_path)
+	print("\nThe file used for the camera calibration :", calibration_path)
 
 	return mtx, dist
 

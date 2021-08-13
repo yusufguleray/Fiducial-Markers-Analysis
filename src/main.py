@@ -1,17 +1,17 @@
 import cv2
 import numpy as np
 import pyrealsense2 as rs
-import utils, detectors
+import utils, detectors, test
 import time  #For calculating the time it takes to calculate
 
 is_april = 1
 isAruCo = 1
-isCharuco = 0
-isStag = 0
+isCharuco = 1
+isStag = 1
 
 is_visualize = True
 
-isTest = False
+tester = test.Test(is_time = True, is_n_of_detections = True)
 
 calib_file_name = "realsense_d415_010721_2.npz"
 calib_mtx, dist_coef = utils.getCalibData(calib_file_name)
@@ -33,61 +33,51 @@ print("Connection with the camera is succesful!")
 print("Press [ESC] to close the application")
 
 "--- Data for testing ---"
-nOfFrames = 0
-averageCalculationTime = 0
-averageDetectionNumber = 0
-previousTags = None
+
 
 while True:
-	time_start = time.perf_counter()
 
 	# Get frame from realsense and convert to grayscale image
 	frames = pipeline.wait_for_frames()
 	img_rgb = np.asanyarray(frames.get_color_frame().get_data())
 	img_gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
+
+	tester.start()
+	detection_list = []
 	
 	" --- AprilTag --- "
 	if is_april == True:
-		img_rgb, april_list_tag = detectors.april_detector(img_rgb, img_gray,
+		img_rgb, april_detections = detectors.april_detector(img_rgb, img_gray,
 												 calib_mtx, dist_coef, visualize = is_visualize, cube_color = (255,0,0))
-		
-		#img_rgb = utils.draw_cube_list(img_rgb, april_list_tag, calib_mtx, dist_coef)
+		if april_detections is not None : detection_list.append(april_detections)
+
 	" --- ArUco --- "
 	if isAruCo == True:
-		img_rgb, aruco_list_tag = detectors.aruco_detector(img_rgb, img_gray,
+		img_rgb, aruco_detections = detectors.aruco_detector(img_rgb, img_gray,
 										calib_mtx, dist_coef, visualize=True, cube_color = (0,0,0))
+		if aruco_detections is not None : detection_list.append(aruco_detections)
 
 	" --- CharUco --- "
 	if isCharuco == True:
-		img_rgb = detectors.charuco_detector(img_rgb, img_gray,
-								calib_mtx, dist_coef, visualize=True, cube_color = (0,0,0))
+		img_rgb, charuco_detections = detectors.charuco_detector(img_rgb, img_gray,
+								calib_mtx, dist_coef, tag_size=0.08, visualize=True, cube_color = (0,0,0), use_april_detecotor = False)
+		if charuco_detections is not None : detection_list.append(charuco_detections)
 
 	" --- STag --- "
 	if isStag == True:
-		img_rgb, aruco_list_tag, aruco_n_detections = detectors.stag_detector(img_rgb, img_gray,
-										calib_mtx, dist_coef, visualize=True, cube_color = (255,255,255))
+		img_rgb, stag_detections = detectors.stag_detector(img_rgb, img_gray,
+										calib_mtx, dist_coef, visualize=True, cube_color = (255,255,255), take_mean = True)
+		if stag_detections is not None : detection_list.append(stag_detections)
 
-
+	tester.stop(detection_list)
 	# Display the result
 	cv2.imshow("AR-Example", cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR))
 	
-	if isTest == True:
-		"--- Testing Stuff ---"
-		nOfFrames+=1
-		time_elapsed = (time.perf_counter() - time_start)
-		averageCalculationTime = averageCalculationTime + 1/nOfFrames*(time_elapsed - averageCalculationTime)
-		averageDetectionNumber = averageDetectionNumber + 1/nOfFrames*(nOfDetections - averageDetectionNumber)
-		positional_error, orrientational_error  = utils.pose_error()
-
 
 	# If [ESC] pressed, close the application
 	if cv2.waitKey(100) == 27:
 		print("Application closed")
-		if isTest == True:
-			print("   ---   The results of the test   ---")
-			print("Number of the frames is : ", nOfFrames)
-			print("Average computation time is : ", averageCalculationTime, "seconds")
-			print("Average number of detections is : ", averageDetectionNumber)
+		tester.finalize()
 		break
 # Close all cv2 windows
 cv2.destroyAllWindows()

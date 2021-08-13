@@ -22,11 +22,18 @@ Return:
 """
 
 import cv2
+from numpy.core.numeric import indices
+from numpy.lib.arraysetops import unique
 import utils
 import numpy as np
 
+def detections_writer(ids, img_corners, rvecs, tvecs, tag_size, tag_name):
+    
+    return {'ids': ids, 'img_corners': img_corners, 'rvecs': rvecs, 'tvec': tvecs, 'tag_size': tag_size, 'tag_name': tag_name}
+
+
 def april_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visualize = False,
-                    cube_color = (255, 0, 0), tag_family = 'tag36h11'):
+                    cube_color = (255, 0, 0), tag_family = 'tag36h11', just_img_corners = False):
     """Detects the AprilTags in the image.
 
     Parameters:
@@ -38,6 +45,7 @@ def april_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visual
     draw (boolean) : True for visualization
     cube_color (tuple) : RGB color of the cube to be visualized, by default red
     tag_family (string) : Tag family that is used for the AprilTag 
+    just_img_corners(bool) : Returns just the ids and the img corners
 
     Returns:
     img_rgb : Color image (with the visualization if selected)
@@ -55,13 +63,21 @@ def april_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visual
     detector = apriltag(tag_family)
     detections = detector.detect(img_gray) # Detect markers on the gray image
     n_detections = len(detections)
-        
-    list_tag = []
+    
+    if (n_detections == 0) : return img_rgb, None # No detections
 
     id = np.empty((n_detections))
     img_corners = np.empty((n_detections, 4, 2))
     rvec = np.empty((n_detections, 3))
     tvec = np.empty((n_detections, 3))
+
+    if just_img_corners == True:
+        for i, apriltag in enumerate(detections):
+            cur_id = apriltag["id"]
+            cur_corners = apriltag['lb-rb-rt-lt']
+            id[i] = cur_id
+            img_corners[i] = cur_corners
+        return id, img_corners
     
     for i, apriltag in enumerate(detections):
 
@@ -85,7 +101,7 @@ def april_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visual
         tvec[i] = cur_tvec
 
     id = id.astype(int)
-    detections = {'id': id, 'img_corners': img_corners, 'rvec': rvec, 'tvec': tvec, 'size_of_tag': tag_size}
+    detections = detections_writer(id, img_corners, rvec, tvec, tag_size, 'april_tag')
     
     return img_rgb, detections
 
@@ -113,6 +129,9 @@ def aruco_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visual
     """
     aruco_corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(img_gray, cv2.aruco.getPredefinedDictionary(tag_family))
     n_detections = len(aruco_corners)
+
+    if (n_detections == 0) : return img_rgb, None # No detections
+
     img_corners = np.array(aruco_corners).squeeze()
 
     rvec = np.empty((n_detections, 3))
@@ -128,15 +147,15 @@ def aruco_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visual
         rvec[i] = cur_rvec
         tvec[i] = cur_tvec
 
-    detections = {'id': ids, 'img_corners': img_corners, 'rvec': rvec, 'tvec': tvec, 'size_of_tag': tag_size}
     
+    detections = detections_writer(ids, img_corners, rvec, tvec, tag_size, 'aruco_tag')
+       
     return img_rgb, detections
 
 
 
 def charuco_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visualize = False,
-                cube_color = (255, 255, 255), tag_family = cv2.aruco.DICT_6X6_250, charuco_board = None
-                ,threshold_dist_multiplier = 1.55):
+                cube_color = (255, 255, 255), tag_family = cv2.aruco.DICT_APRILTAG_36h10, charuco_board = None, use_april_detecotor = False):
     """Detects the ArucoTags in the image.
 
     Parameters:
@@ -158,66 +177,57 @@ def charuco_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visu
                             tag = {'id': id, 'corners': corners, 'rvec': rvec, 'tvec': tvec, 'size_of_tag': size_of_tag}
 
     """
-
-    def charuco_single_detector( img_rgb, img_gray ,corners, ids, charUcoBoard):
-
-        ret1, c_corners, c_ids = cv2.aruco.interpolateCornersCharuco(corners, ids, img_gray, charUcoBoard)
-        ret2, p_rvec, p_tvec = cv2.aruco.estimatePoseCharucoBoard(c_corners, c_ids, charUcoBoard, calib_mtx, dist_coef, rvec = None, tvec = None, useExtrinsicGuess=False)
-
-        if (p_rvec is not None and p_tvec is not None) and (not np.isnan(p_rvec).any() and not np.isnan(p_tvec).any()) :
-            if visualize == True:
-                img_rgb = utils.drawCube(img_rgb, p_rvec, p_tvec, calib_mtx, dist_coef, cube_color, tag_size = 0.18, is_centered=False)
-                # aruco.drawAxis(img_rgb, calib_mtx, dist_coef, p_rvec, p_tvec, 1)
-        return img_rgb, p_rvec, p_tvec
               
-    if charuco_board == None:
-        charuco_board = charUcoBoard = cv2.aruco.CharucoBoard_create(4, 4, .045, .0225, cv2.aruco.Dictionary_get(tag_family))
+    if use_april_detecotor == True:
+        tag_ids, corners = april_detector(img_rgb, img_gray,calib_mtx,dist_coef,tag_size, tag_family = 'tag36h10', just_img_corners = True)
+    else :
+        corners, tag_ids, rejected_points = cv2.aruco.detectMarkers(img_gray, cv2.aruco.getPredefinedDictionary(tag_family))
 
-    corners, ids, rejected_points = cv2.aruco.detectMarkers(img_gray, cv2.aruco.getPredefinedDictionary(tag_family))
-    
-    if (corners is not None and ids is not None) and (len(corners) == len(ids) and len(corners) != 0) and (list(ids).count(2) > 0 and list(ids).count(5) > 0 ):
+    if (len(corners) == 0) : return img_rgb, None # No detections
+
+    if (corners is not None and tag_ids is not None) and (len(corners) == len(tag_ids) and len(corners) != 0):
         
-        ids_l = list(ids)
-        corners_np = np.array(corners).squeeze()
-        ids = ids.squeeze()
-        
-        aruco_centers = corners_np.mean(axis=1)
+        corners = np.array(corners).squeeze()
+        tag_ids = tag_ids.squeeze()
+        number_of_charuco = int(np.ceil((np.max(tag_ids) + 1) / 18))
 
-        if (ids_l.count(2) > 1 and ids_l.count(5) > 1 ): # in the case of multiple markers
+        id = np.empty((number_of_charuco))
+        img_corners = np.empty((number_of_charuco, 23, 2))
+        rvec = np.empty((number_of_charuco, 3))
+        tvec = np.empty((number_of_charuco, 3))
 
-            distance_matrix_2_5 = utils.distance_matrix(aruco_centers[np.where(ids == 2)], aruco_centers[np.where(ids == 5)], squared=True)
-            id_5_match_index = np.argmin(distance_matrix_2_5,axis=1)
-            center_of_closest_id5 = aruco_centers[np.where(ids == 5)][id_5_match_index]
-            charuco_centers = ( aruco_centers[np.where(ids == 2)] +  center_of_closest_id5 ) / 2
-            distance_2_5 = utils.elementwise_distance(aruco_centers[np.where(ids == 2)], center_of_closest_id5, squared = True)
+        dictionary = cv2.aruco.Dictionary_get(cv2.aruco.DICT_APRILTAG_36h10)
+        charUcoBoard = cv2.aruco.CharucoBoard_create(6, 6, tag_size / 6, tag_size / 6 * 0.8, dictionary)
 
-            distance_matrix = utils.distance_matrix(aruco_centers, charuco_centers).squeeze()
-            center_index = np.argmin(distance_matrix, axis=1)  # Closest charuco center to the aruco tags
+        for i in range(number_of_charuco):
+            
+            indices = (tag_ids >= 18 * i) & (tag_ids < (18 * (i + 1)))
 
-            rvec, tvec = [], []
+            if np.any(indices == True): 
+                cur_corners = corners[indices]
+                cur_ids = tag_ids[indices] - 18 * i
 
-            for i in range(distance_matrix.shape[1]):
-                cur_aruco_centers = aruco_centers[np.where(center_index == i)]
-                cur_corners = corners_np[np.where(center_index == i)]
-                cur_ids = ids[np.where(center_index == i)]
-                filtered_index = (np.where(utils.distance_matrix(cur_aruco_centers, charuco_centers[i].reshape(1,2), squared = True) < threshold_dist_multiplier**2 * distance_2_5[i]))[0]
-                filtered_corners = cur_corners[filtered_index]
-                filtered_ids = cur_ids[filtered_index]
-                print('The number of filtered elements : ', cur_ids.shape[0] - filtered_ids.shape[0])
-                print('Curent ids : ',  filtered_ids)
-                img_rgb, cur_rvec, cur_tvec = charuco_single_detector(img_rgb, img_gray, filtered_corners, filtered_ids, charUcoBoard)
-                rvec.append(cur_rvec)
-                tvec.append(cur_tvec)
+                ret1, c_corners, c_ids = cv2.aruco.interpolateCornersCharuco(cur_corners, cur_ids, img_gray, charUcoBoard)
+                ret2, p_rvec, p_tvec = cv2.aruco.estimatePoseCharucoBoard(c_corners, c_ids, charUcoBoard, calib_mtx, dist_coef, rvec = None, tvec = None, useExtrinsicGuess=False)
 
-        else: # Single tag
-            img_rgb, rvec, tvec = charuco_single_detector(img_rgb, img_gray ,corners, ids, charUcoBoard)
+                if (p_rvec is not None and p_tvec is not None) and (not np.isnan(p_rvec).any() and not np.isnan(p_tvec).any()):
+                    
+                    id[i] = i
+                    # img_corners[i] = c_corners.squeeze()
+                    rvec[i] = p_rvec.squeeze()
+                    tvec[i] = p_tvec.squeeze()
+                    if visualize == True:
+                        img_rgb = utils.drawCube(img_rgb, p_rvec, p_tvec, calib_mtx, dist_coef, cube_color, tag_size, is_centered=False)
+                        # aruco.drawAxis(img_rgb, calib_mtx, dist_coef, p_rvec, p_tvec, 1)
 
-    return img_rgb
+        detections = detections_writer(id, img_corners, rvec, tvec, tag_size, 'charuco_tag')
+        return img_rgb, detections
 
+    return img_rgb, None
 
 def stag_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visualize = False,
-                cube_color = (0, 0, 255)):
-    """Detects the ArucoTags in the image.
+                cube_color = (0, 0, 255), tag_family = 17, take_mean = True):
+    """Detects the STag in the image.
 
     Parameters:
     img_rgb : Color image for the visualization
@@ -227,7 +237,8 @@ def stag_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visuali
     size_of_tag : Size of the tags in meters
     draw (boolean) : Visualizes the
     cube_color (tuple) : RGB color of the cube to be visualized, by default blue
-    tag_family : Tag family that is used for the ArucoTag 
+    tag_family(int) : Tag family that is used for the STag
+    take_mean (boolean) : If true, takes the mean for the corners of the same ids else takes the first one
 
     Returns:
     img : Image (with the visualization if selected)
@@ -237,28 +248,41 @@ def stag_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visuali
     """
     import pyStag as stag
 
-    stagDetector = stag.Detector(11, 7, False)
+    stagDetector = stag.Detector(tag_family, 7, False)
     numberofMarkers = stagDetector.detect(img_gray)
     ids = stagDetector.getIds()
-    detections = stagDetector.getContours()
+    img_corners = stagDetector.getContours()
 
-    n_detections = len(detections)
+    if numberofMarkers == 0 : return img_rgb, None # No detection
 
-    list_tag = []
+    ids_np = np.array(ids)
+    img_corners_np = np.array(img_corners)
 
-    for i in range(n_detections):
-        corners2 = detections[i]
-        corners2 = np.array([corners2[::1]])
+    # Because there are multiple detections for same id it has to be filtered
+    unique_ids = np.unique(ids)
+    n_detections = unique_ids.shape[0]
+
+    rvec = np.empty((n_detections, 3))
+    tvec = np.empty((n_detections, 3))
+    filtered_img_corners = np.empty((n_detections, 4, 2))
+
+    for i, cur_id in enumerate (unique_ids):
+        if take_mean == True:
+            cur_img_corners = np.mean(img_corners_np[ids == cur_id],axis = 0)
+        else:
+            cur_img_corners = img_corners_np[ids == cur_id][0]
+
+        cur_img_corners = np.array([cur_img_corners[::1]])
+            
         # Estimate pose of the respective marker, with matrix size 1x1
-        rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(corners2, tag_size, calib_mtx, dist_coef)
+        cur_rvec, cur_tvec, _ = cv2.aruco.estimatePoseSingleMarkers(cur_img_corners, tag_size, calib_mtx, dist_coef)
 
         if visualize == True:
-            img_rgb = utils.drawCube(img_rgb, rvec, tvec, calib_mtx, dist_coef, cube_color)
+            img_rgb = utils.drawCube(img_rgb, cur_rvec, cur_tvec, calib_mtx, dist_coef, cube_color)
 
-        id = ids[i]
-        corners = corners2
-        
-        tag = {'id': id, 'corners': corners, 'rvec': rvec, 'tvec': tvec, 'size_of_tag': tag_size}
-        list_tag.append(tag)
+        filtered_img_corners[i] = cur_img_corners
+        rvec [i] = cur_rvec
+        tvec [i] = cur_tvec
 
-    return img_rgb, list_tag, n_detections
+    detections = detections_writer(unique_ids, filtered_img_corners, rvec, tvec, tag_size, 'stag')
+    return img_rgb, detections
