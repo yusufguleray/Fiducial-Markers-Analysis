@@ -29,7 +29,7 @@ import numpy as np
 
 def detections_writer(ids, img_corners, rvecs, tvecs, tag_size, tag_name):
     
-    return {'ids': ids, 'img_corners': img_corners, 'rvecs': rvecs, 'tvec': tvecs, 'tag_size': tag_size, 'tag_name': tag_name}
+    return {'ids': ids, 'img_corners': img_corners, 'rvecs': rvecs, 'tvecs': tvecs, 'tag_size': tag_size, 'tag_name': tag_name}
 
 
 def april_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visualize = False,

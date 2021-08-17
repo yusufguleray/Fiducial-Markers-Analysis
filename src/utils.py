@@ -196,7 +196,12 @@ def angle_error(v1, v2):
 	# v2 is your second vector
     return np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
 
-# def pose_error(prevPose, curPose):
+def angle_error_rowwise(A, B):
+    p1 = np.einsum('ij,ij->i',A,B)
+    p2 = np.einsum('ij,ij->i',A,A)
+    p3 = np.einsum('ij,ij->i',B,B)
+    p4 = p1 / np.sqrt(p2*p3)
+    return np.arccos(np.clip(p4,-1.0,1.0))
 
 
 def distance_matrix(A, B, squared=False):
@@ -273,3 +278,7 @@ def elementwise_distance(A, B, squared = False):
 		return np.sqrt(D_squared)
 
 	return D_squared
+
+def moving_average(old_mean, new_data, n_of_frames):
+	
+	return old_mean + 1 / n_of_frames * (new_data - old_mean)

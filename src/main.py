@@ -2,16 +2,16 @@ import cv2
 import numpy as np
 import pyrealsense2 as rs
 import utils, detectors, test
-import time  #For calculating the time it takes to calculate
 
-is_april = 1
-isAruCo = 1
-isCharuco = 1
-isStag = 1
+is_april = 1     # Visualization color : RED 
+isAruCo = 0      # Visualization color : BLACK
+isCharuco = 0	 # Visualization color : WHITE
+isStag = 0       # Visualization color : BLUE
 
 is_visualize = True
+tag_size = 0.04 # in meters
 
-tester = test.Test(is_time = True, is_n_of_detections = True)
+tester = test.Test(is_time = True, is_n_of_detections = True, is_jitter = True, tag_size=tag_size, is_accuracy = True)
 
 calib_file_name = "realsense_d415_010721_2.npz"
 calib_mtx, dist_coef = utils.getCalibData(calib_file_name)
@@ -48,25 +48,25 @@ while True:
 	" --- AprilTag --- "
 	if is_april == True:
 		img_rgb, april_detections = detectors.april_detector(img_rgb, img_gray,
-												 calib_mtx, dist_coef, visualize = is_visualize, cube_color = (255,0,0))
+												 calib_mtx, dist_coef, tag_size = tag_size, visualize = is_visualize, cube_color = (255,0,0))
 		if april_detections is not None : detection_list.append(april_detections)
 
 	" --- ArUco --- "
 	if isAruCo == True:
 		img_rgb, aruco_detections = detectors.aruco_detector(img_rgb, img_gray,
-										calib_mtx, dist_coef, visualize=True, cube_color = (0,0,0))
+										calib_mtx, dist_coef, tag_size = tag_size, visualize=True, cube_color = (0,0,0))
 		if aruco_detections is not None : detection_list.append(aruco_detections)
 
 	" --- CharUco --- "
 	if isCharuco == True:
 		img_rgb, charuco_detections = detectors.charuco_detector(img_rgb, img_gray,
-								calib_mtx, dist_coef, tag_size=0.08, visualize=True, cube_color = (0,0,0), use_april_detecotor = False)
+								calib_mtx, dist_coef,  tag_size = tag_size, visualize=True, cube_color = (255,255,255), use_april_detecotor = False)
 		if charuco_detections is not None : detection_list.append(charuco_detections)
 
 	" --- STag --- "
 	if isStag == True:
 		img_rgb, stag_detections = detectors.stag_detector(img_rgb, img_gray,
-										calib_mtx, dist_coef, visualize=True, cube_color = (255,255,255), take_mean = True)
+										calib_mtx, dist_coef, tag_size = tag_size, visualize=True, cube_color = (0,0,255), take_mean = True)
 		if stag_detections is not None : detection_list.append(stag_detections)
 
 	tester.stop(detection_list)
