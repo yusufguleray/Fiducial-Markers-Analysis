@@ -9,17 +9,17 @@ isCharuco = 0	 # Visualization color : WHITE
 isStag = 0       # Visualization color : BLUE
 
 is_visualize = True
-tag_size = 0.04 # in meters
+tag_size = 0.005 # in meters
 
 tester = test.Test(is_time = True, is_n_of_detections = True, is_jitter = True, tag_size=tag_size, is_accuracy = True)
 
-calib_file_name = "realsense_d415_010721_2.npz"
+calib_file_name = "D41517082021_192037.npz"
 calib_mtx, dist_coef = utils.getCalibData(calib_file_name)
 
 # Initialize communication with intel realsense
 pipeline = rs.pipeline()
 realsense_cfg = rs.config()
-realsense_cfg.enable_stream(rs.stream.color, 1280, 720, rs.format.rgb8, 6)
+realsense_cfg.enable_stream(rs.stream.color, 1920, 1080, rs.format.rgb8, 30)
 pipeline.start(realsense_cfg)
 
 # Check communication
@@ -71,7 +71,8 @@ while True:
 
 	tester.stop(detection_list)
 	# Display the result
-	cv2.imshow("AR-Example", cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR))
+	display_image = cv2.resize(img_rgb, (960, 540))
+	cv2.imshow("AR-Example", cv2.cvtColor(display_image, cv2.COLOR_RGB2BGR))
 	
 
 	# If [ESC] pressed, close the application

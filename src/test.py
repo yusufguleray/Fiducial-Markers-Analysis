@@ -105,28 +105,27 @@ class Test:
                 for detection in detections:
                     ids, rvecs, tvecs = detection['ids'], detection['rvecs'], detection['tvecs']
 
-            mean_rvec = np.mean(rvecs, axis=0)
-            R, _ = cv2.Rodrigues(mean_rvec)
-            tvecs_origin_id0 = tvecs - tvecs[np.argwhere(ids == 0).squeeze()]
-            tvecs_wrt_B = tvecs_origin_id0 @ R
+            if (ids is not None) and (rvecs is not None) and (tvecs is not None) and np.argwhere(ids == 0).size != 0:
+                mean_rvec = np.mean(rvecs, axis=0)
+                R, _ = cv2.Rodrigues(mean_rvec)
+                tvecs_origin_id0 = tvecs - tvecs[np.argwhere(ids == 0).squeeze()]
+                tvecs_wrt_B = tvecs_origin_id0 @ R
 
-            id_dist = utils.distance_matrix(ids.reshape(-1, 1), np.arange(self.map.shape[0]).reshape(-1, 1))
-            indices = (np.argwhere(id_dist == 0)).T
-            cur_id_match_indices = indices[0]
-            map_id_match_indices = indices[1]
+                id_dist = utils.distance_matrix(ids.reshape(-1, 1), np.arange(self.map.shape[0]).reshape(-1, 1))
+                indices = (np.argwhere(id_dist == 0)).T
+                cur_id_match_indices = indices[0]
+                map_id_match_indices = indices[1]
 
-            bias = np.mean(tvecs_wrt_B[cur_id_match_indices]-self.map[map_id_match_indices], axis=0)
-            distances = utils.elementwise_distance(tvecs_wrt_B[cur_id_match_indices]-bias, self.map[map_id_match_indices])
-            cur_av_positional_accuracy = np.mean(distances)
-            self.av_position_accuracy = utils.moving_average(self.av_position_accuracy, cur_av_positional_accuracy, self.n_of_frames)
-            self.position_accuracy_list.append(cur_av_positional_accuracy)
+                bias = np.mean(tvecs_wrt_B[cur_id_match_indices]-self.map[map_id_match_indices], axis=0)
+                distances = utils.elementwise_distance(tvecs_wrt_B[cur_id_match_indices]-bias, self.map[map_id_match_indices])
+                cur_av_positional_accuracy = np.mean(distances)
+                self.av_position_accuracy = utils.moving_average(self.av_position_accuracy, cur_av_positional_accuracy, self.n_of_frames)
+                self.position_accuracy_list.append(cur_av_positional_accuracy)
 
-            orientation_accuracy = utils.angle_error_rowwise(rvecs, np.ones((rvecs.shape[0], 1)) @ mean_rvec.reshape(1, -1))
-            cur_av_orientation_accuracy = np.mean(orientation_accuracy)
-            self.av_orientation_accuracy = utils.moving_average(self.av_orientation_accuracy, cur_av_orientation_accuracy, self.n_of_frames)
-            self.orientation_accuracy.append(cur_av_orientation_accuracy)
-
-
+                orientation_accuracy = utils.angle_error_rowwise(rvecs, np.ones((rvecs.shape[0], 1)) @ mean_rvec.reshape(1, -1))
+                cur_av_orientation_accuracy = np.mean(orientation_accuracy)
+                self.av_orientation_accuracy = utils.moving_average(self.av_orientation_accuracy, cur_av_orientation_accuracy, self.n_of_frames)
+                self.orientation_accuracy.append(cur_av_orientation_accuracy)
 
 
     def finalize(self):
@@ -142,9 +141,9 @@ class Test:
             print('Average number of detection :', self.av_n_of_detections, 'detections/frame')
 
         if self.is_jitter:
-            print('Average positional jitter :', self.av_position_jitter, 'meters/(tag*frame)')
+            print('Average positional jitter :', self.av_position_jitter, 'meters/(tag*frame) |',self.av_position_jitter*1000, 'milimeters/(tag*frame) |')
             print('Average orientational jitter :', self.av_orientation_jitter, 'rad/(tag*frame)')
 
         if self.is_accuracy:
-            print('Average positional accuracy :', self.av_position_accuracy, 'meters/(tag*frame)')
+            print('Average positional accuracy :', self.av_position_accuracy, 'meters/(tag*frame) |',self.av_position_accuracy*1000, 'milimeters/(tag*frame)')
             print('Average orientational accuracy :', self.av_orientation_accuracy, 'rad/(tag*frame)')

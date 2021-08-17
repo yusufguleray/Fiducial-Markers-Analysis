@@ -74,18 +74,18 @@ def draw_cube_list(img_rgb, detection_list, calib_mtx, dist_coef, tag_size =1, c
 
 def calibrator():
 	import cv2
-	import cv2.aruco as aruco
 	import numpy as np
 	import pyrealsense2 as rs
 
 	# Defines the path to save the calibration file and the dictonary used
-	name = "realsense_d415_010721_2.npz"
-	dictionary = aruco.DICT_6X6_250
+	device_name = input("Please enter the device name :")
+	name = device_name + "_" + get_time() + ".npz"
+	dictionary = cv2.aruco.DICT_APRILTAG_36h10
 
 	# Initialize communication with intel realsense
 	pipeline = rs.pipeline()
 	realsense_cfg = rs.config()
-	realsense_cfg.enable_stream(rs.stream.color, 1280, 720, rs.format.rgb8, 6)
+	realsense_cfg.enable_stream(rs.stream.color, 1920, 1080, rs.format.rgb8, 30)
 	pipeline.start(realsense_cfg)
 
 	# Check communication
@@ -96,7 +96,7 @@ def calibrator():
 		raise Exception("Can't get rgb frame from data source")
 
 	# Define what the calibration board looks like (same as the pdf)
-	board = cv2.aruco.CharucoBoard_create(4,4, .045, .0225, aruco.Dictionary_get(dictionary))
+	board = cv2.aruco.CharucoBoard_create(6, 6, 0.16/6, 0.16/6*0.8, cv2.aruco.Dictionary_get(dictionary))
 	record_count = 0
 	# Create two arrays to store the recorded corners and ids
 	all_corners = []
@@ -113,19 +113,20 @@ def calibrator():
 		img_gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
 		
 		# Detect markers on the gray image
-		res = aruco.detectMarkers(img_gray, aruco.getPredefinedDictionary(aruco.DICT_6X6_250))
+		res = cv2.aruco.detectMarkers(img_gray, cv2.aruco.getPredefinedDictionary(dictionary))
 		# Draw the detected markers
-		aruco.drawDetectedMarkers(img_rgb, res[0], res[1])
+		cv2.aruco.drawDetectedMarkers(img_rgb, res[0], res[1])
 		# Display the result
-		cv2.imshow("AR-Example", cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR))
+		display_image = cv2.resize(img_rgb, (960, 540))
+		cv2.imshow("AR-Example", cv2.cvtColor(display_image, cv2.COLOR_RGB2BGR))
 		
 		key = cv2.waitKey(10)
-		# If eight markers have been found, allow recording
-		if len(res[0]) == 8:
+		# If 18 markers have been found, allow recording
+		if len(res[0]) == 18:
 			# Interpolate the corners of the markers
-			res2 = aruco.interpolateCornersCharuco(res[0], res[1], img_gray, board)
+			res2 = cv2.aruco.interpolateCornersCharuco(res[0], res[1], img_gray, board)
 			# Add the detected interpolated corners and the marker ids to the arrays if the user press [r] and the interpolation is valid
-			if key == ord('r') and res2[1] is not None and res2[2] is not None and len(res2[1]) > 8:
+			if key == ord('r') and res2[1] is not None and res2[2] is not None and len(res2[1]) > 18:
 				all_corners.append(res2[1])
 				all_ids.append(res2[2])
 				record_count += 1
@@ -138,10 +139,10 @@ def calibrator():
 			if(record_count != 0):
 				print("Calculate calibration [2/4] --> Use "+str(record_count)+" records"),
 				# Calculate the camera calibration
-				ret, mtx, dist, rvecs, tvecs = aruco.calibrateCameraCharuco(all_corners, all_ids, board, img_gray.shape, None, None)
+				ret, mtx, dist, rvecs, tvecs = cv2.aruco.calibrateCameraCharuco(all_corners, all_ids, board, img_gray.shape, None, None)
 				print("Save calibration [3/4]")
 				# Save the calibration information into a file
-				np.savez_compressed(name, ret=ret, mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
+				np.savez_compressed(getCalibPath(name), ret=ret, mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
 				print("Done [4/4]")
 			else:
 				print("Interrupted since there are no records...")
@@ -282,3 +283,7 @@ def elementwise_distance(A, B, squared = False):
 def moving_average(old_mean, new_data, n_of_frames):
 	
 	return old_mean + 1 / n_of_frames * (new_data - old_mean)
+
+def get_time():
+	import time
+	return time.strftime("%d%m%Y_%H%M%S")
