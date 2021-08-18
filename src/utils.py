@@ -160,6 +160,12 @@ def getCalibPath(filename):
 	# Defines the path of the calibration file and the dictonary used
 	return os.path.join(os.path.split(os.path.dirname(__file__))[0], 'calibration','calibfiles', filename)
 
+def get_test_path(filename):
+	import os
+
+	# Defines the path of the calibration file and the dictonary used
+	return os.path.join(os.path.split(os.path.dirname(__file__))[0], 'testresults', filename)
+
 
 def displayCalibMat(filename, showmtx= True, showDist=True):
 	import os
@@ -287,3 +293,21 @@ def moving_average(old_mean, new_data, n_of_frames):
 def get_time():
 	import time
 	return time.strftime("%d%m%Y_%H%M%S")
+
+def get_process_memory():
+	import psutil, os
+
+	process = psutil.Process(os.getpid())
+	mem_info = process.memory_info()   
+	return mem_info.rss + mem_info.vms + mem_info.shared  # in bytes
+
+def user_prompt(question: str) -> bool:
+    """ Prompt the yes/no-*question* to the user. """
+    from distutils.util import strtobool
+
+    while True:
+        user_input = input(question + " [y/n]: ")
+        try:
+            return bool(strtobool(user_input))
+        except ValueError:
+            print("Please use y/n or yes/no.\n")

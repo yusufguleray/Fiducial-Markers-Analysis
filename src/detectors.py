@@ -142,12 +142,12 @@ def aruco_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visual
         cur_rvec, cur_tvec, objPoints = cv2.aruco.estimatePoseSingleMarkers(aruco_corners[i], tag_size, calib_mtx, dist_coef)
         
         if visualize == True:
-            img_rgb = utils.drawCube(img_rgb, cur_rvec, cur_tvec, calib_mtx, dist_coef, cube_color)
+            img_rgb = utils.drawCube(img_rgb, cur_rvec, cur_tvec, calib_mtx, dist_coef, cube_color, tag_size=tag_size)
         
         rvec[i] = cur_rvec
         tvec[i] = cur_tvec
 
-    
+    ids = ids.squeeze()
     detections = detections_writer(ids, img_corners, rvec, tvec, tag_size, 'aruco_tag')
        
     return img_rgb, detections
@@ -278,7 +278,7 @@ def stag_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visuali
         cur_rvec, cur_tvec, _ = cv2.aruco.estimatePoseSingleMarkers(cur_img_corners, tag_size, calib_mtx, dist_coef)
 
         if visualize == True:
-            img_rgb = utils.drawCube(img_rgb, cur_rvec, cur_tvec, calib_mtx, dist_coef, cube_color)
+            img_rgb = utils.drawCube(img_rgb, cur_rvec, cur_tvec, calib_mtx, dist_coef, cube_color, tag_size=tag_size)
 
         filtered_img_corners[i] = cur_img_corners
         rvec [i] = cur_rvec

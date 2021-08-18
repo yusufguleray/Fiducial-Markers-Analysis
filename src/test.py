@@ -18,6 +18,8 @@ class Test:
         if is_memory:
             self.is_memory = True
             self.av_memory_consumption = 0
+            self.cur_memory = 0
+            self.memory_consumption_list = []
 
         if is_jitter:
             self.is_jitter = True
@@ -29,7 +31,7 @@ class Test:
         if is_accuracy:
             self.is_accuracy = True
             self.av_position_accuracy, self.av_orientation_accuracy = 0, 0
-            self.position_accuracy_list, self.orientation_accuracy = [], []
+            self.position_accuracy_list, self.orientation_accuracy_list = [], []
 
             array_size = list(map(int, input('Please enter the number of tags (Longitudinal, Lateral) :').split(",")))
             padding = tag_size * padding_ratio
@@ -50,8 +52,11 @@ class Test:
 
     def start(self):
 
-        if self.is_time == True:
+        if self.is_time:
             self.cur_time = time.perf_counter()
+
+        if self.is_memory:
+            self.cur_memory = utils.get_process_memory()
 
     def stop(self, detections):
         
@@ -60,7 +65,10 @@ class Test:
         if self.is_time :
             time_elapsed = (time.perf_counter() - self.cur_time)
             self.duration_list.append(time_elapsed)
-            self.av_time = utils.moving_average(self.av_time, time_elapsed, self.n_of_frames)
+
+        if self.is_memory:
+            memory_usage = utils.get_process_memory() - self.cur_memory
+            self.memory_consumption_list.append(memory_usage)
 
         if self.is_n_of_detections :
             n_of_detection = 0
@@ -89,12 +97,10 @@ class Test:
                 
                 positional_jitter = utils.elementwise_distance(self.prev_tvecs[prev_id_match_indices], tvecs[cur_id_match_indices])
                 cur_av_positional_jitter = np.mean(positional_jitter)  # Average of all the tags
-                self.av_position_jitter = utils.moving_average(self.av_position_jitter, cur_av_positional_jitter, self.n_of_frames)
                 self.position_jitter_list.append(cur_av_positional_jitter)
 
                 orientation_jitter = utils.angle_error_rowwise(self.prev_rvecs[prev_id_match_indices], rvecs[cur_id_match_indices])
                 cur_av_orientational_jitter = np.mean(orientation_jitter)
-                self.av_orientation_jitter = utils.moving_average(self.av_orientation_jitter, cur_av_orientational_jitter, self.n_of_frames)
                 self.orientation_jitter_list.append(cur_av_orientational_jitter)
 
             self.prev_ids, self.prev_rvecs, self.prev_tvecs  = ids, rvecs, tvecs  
@@ -119,31 +125,101 @@ class Test:
                 bias = np.mean(tvecs_wrt_B[cur_id_match_indices]-self.map[map_id_match_indices], axis=0)
                 distances = utils.elementwise_distance(tvecs_wrt_B[cur_id_match_indices]-bias, self.map[map_id_match_indices])
                 cur_av_positional_accuracy = np.mean(distances)
-                self.av_position_accuracy = utils.moving_average(self.av_position_accuracy, cur_av_positional_accuracy, self.n_of_frames)
                 self.position_accuracy_list.append(cur_av_positional_accuracy)
 
                 orientation_accuracy = utils.angle_error_rowwise(rvecs, np.ones((rvecs.shape[0], 1)) @ mean_rvec.reshape(1, -1))
                 cur_av_orientation_accuracy = np.mean(orientation_accuracy)
-                self.av_orientation_accuracy = utils.moving_average(self.av_orientation_accuracy, cur_av_orientation_accuracy, self.n_of_frames)
-                self.orientation_accuracy.append(cur_av_orientation_accuracy)
+                self.orientation_accuracy_list.append(cur_av_orientation_accuracy)
 
 
     def finalize(self):
 
+        write_dict={}
+
         print("   ---   The results of the test   ---")
 
         if self.is_time:
+            time_np = np.array(self.duration_list)
+            self.av_time = np.average(time_np)
             print('Average proccesing time :', self.av_time,'seconds')
-            av_frame_rate = 1/self.av_time
-            print('Average frame rate :', av_frame_rate, 'frames/seconds')
+            self.av_frame_rate = 1/self.av_time
+            print('Average frame rate :', self.av_frame_rate, 'frames/seconds')
+
+            write_dict['Average Process Time per Frame [seconds]'] = self.av_time
+            write_dict['Average Frame Rate [frames/seconds]'] = self.av_frame_rate
+
+        if self.is_memory:
+            memory_consumption_np = np.array(self.memory_consumption_list)
+            average_memory_consumption = np.average(memory_consumption_np)
+            self.average_memory_consumption_MB = average_memory_consumption/1048576
+            print('Average memory consumption :', average_memory_consumption, 'bytes/frame |', average_memory_consumption/1048576, 'MB/frame')
+
+            write_dict['Average Memory Consumption per Frame [MB/frame]'] = self.average_memory_consumption_MB
 
         if self.is_n_of_detections:
             print('Average number of detection :', self.av_n_of_detections, 'detections/frame')
 
+            write_dict['Average Number of Detection per Frame'] = self.av_n_of_detections
+
         if self.is_jitter:
+            position_jitters_np = np.array(self.position_jitter_list)
+            self.av_position_jitter = np.average(position_jitters_np)
+
+            orientation_jitters_np = np.array(self.orientation_jitter_list)
+            self.av_orientation_jitter= np.average(orientation_jitters_np)
+
             print('Average positional jitter :', self.av_position_jitter, 'meters/(tag*frame) |',self.av_position_jitter*1000, 'milimeters/(tag*frame) |')
-            print('Average orientational jitter :', self.av_orientation_jitter, 'rad/(tag*frame)')
+            print('Average orientational jitter :', self.av_orientation_jitter, 'rad/(tag*frame) |', self.av_orientation_jitter*180/np.pi, 'degrees/(tag*frame)')
+
+            write_dict['Average Positional Jitter per Frame and Tag [mm/(frame*tag)]'] = self.av_position_jitter*1000
+            write_dict['Average Orientational Jitter per Frame and Tag [degrees/(frame*tag)]'] = self.av_orientation_jitter*180/np.pi
 
         if self.is_accuracy:
+            position_accuracy_np = np.array(self.position_accuracy_list)
+            self.av_position_accuracy = np.average(position_accuracy_np)
+
+            orientation_accuracy_np = np.array(self.orientation_accuracy_list)
+            self.av_orientation_accuracy= np.average(orientation_accuracy_np)
+
             print('Average positional accuracy :', self.av_position_accuracy, 'meters/(tag*frame) |',self.av_position_accuracy*1000, 'milimeters/(tag*frame)')
-            print('Average orientational accuracy :', self.av_orientation_accuracy, 'rad/(tag*frame)')
+            print('Average orientational accuracy :', self.av_orientation_accuracy, 'rad/(tag*frame) |', self.av_orientation_accuracy*180/np.pi, 'degrees/(tag*frame)')
+
+            write_dict['Average Positional Accuracy per Frame and Tag [mm/(frame*tag)]'] = self.av_position_accuracy*1000
+            write_dict['Average Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]'] = self.av_orientation_accuracy*180/np.pi
+
+        if utils.user_prompt("Should the data be recorded recorded?"):
+            import csv
+            from pathlib import Path
+
+            filename = 'test2.csv'
+            filepath = utils.get_test_path(filename)
+            print('Results will be written in to :', filepath)
+
+            test_name = input("What should be the name of these records? : ")
+
+            write_dict['Test Name'] = test_name
+            write_dict['Total Number of Frames'] = self.n_of_frames
+                        
+            atributes = ['Test Name', 
+                        'Total Number of Frames', 
+                        'Average Process Time per Frame [seconds]', 
+                        'Average Frame Rate [frames/seconds]',
+                        'Average Memory Consumption per Frame [MB/frame]' ,
+                        'Average Number of Detection per Frame', 
+                        'Average Positional Jitter per Frame and Tag [mm/(frame*tag)]', 
+                        'Average Orientational Jitter per Frame and Tag [degrees/(frame*tag)]', 
+                        'Average Positional Accuracy per Frame and Tag [mm/(frame*tag)]', 
+                        'Average Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]']
+
+            if not Path(filepath).exists():
+                print('New csv file created :', filepath)
+                with open(filepath, mode='w') as results_file:
+                    attributes_writer = csv.writer(results_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+                    attributes_writer.writerow(atributes)
+
+            with open(filepath, mode='a') as csv_file:
+                fieldnames = atributes
+                writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+
+                writer.writerow(write_dict)

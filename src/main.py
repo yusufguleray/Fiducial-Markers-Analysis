@@ -3,15 +3,15 @@ import numpy as np
 import pyrealsense2 as rs
 import utils, detectors, test
 
-is_april = 1     # Visualization color : RED 
-isAruCo = 0      # Visualization color : BLACK
+is_april = 0     # Visualization color : RED 
+isAruCo = 1      # Visualization color : BLACK
 isCharuco = 0	 # Visualization color : WHITE
 isStag = 0       # Visualization color : BLUE
 
 is_visualize = True
-tag_size = 0.005 # in meters
+tag_size = 0.16 # in meters
 
-tester = test.Test(is_time = True, is_n_of_detections = True, is_jitter = True, tag_size=tag_size, is_accuracy = True)
+tester = test.Test(is_time = True, is_n_of_detections = True, is_jitter = True, tag_size=tag_size, is_memory = True, is_accuracy = True)
 
 calib_file_name = "D41517082021_192037.npz"
 calib_mtx, dist_coef = utils.getCalibData(calib_file_name)
@@ -78,7 +78,7 @@ while True:
 	# If [ESC] pressed, close the application
 	if cv2.waitKey(100) == 27:
 		print("Application closed")
-		tester.finalize()
 		break
 # Close all cv2 windows
 cv2.destroyAllWindows()
+tester.finalize()
