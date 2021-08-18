@@ -286,3 +286,58 @@ def stag_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visuali
 
     detections = detections_writer(unique_ids, filtered_img_corners, rvec, tvec, tag_size, 'stag')
     return img_rgb, detections
+
+def topo_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visualize = False, cube_color = (64,224,208)):
+    import os
+    import subprocess
+    import re
+    
+    image_path = os.path.join(os.path.split(os.path.dirname(__file__))[0], 'libraries','topodetector','topo_image.png')
+    cv2.imwrite(image_path, img_gray)
+
+    path_exe = os.path.join(os.path.split(os.path.dirname(__file__))[0], 'libraries','topodetector','Topotag-detector.exe')
+    path_yml = os.path.join(os.path.split(os.path.dirname(__file__))[0], 'libraries','topodetector','topotag_detection_params.yml')
+    cwd_path = os.path.join(os.path.split(os.path.dirname(__file__))[0], 'libraries','topodetector')
+    
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= (
+        subprocess.STARTF_USESTDHANDLES | subprocess.STARTF_USESHOWWINDOW
+    )
+    startupinfo.wShowWindow = subprocess.SW_HIDE
+
+    CREATE_NO_WINDOW = 0x08000000
+
+    result = subprocess.run(
+        [path_exe, path_yml], capture_output=True, text=True, input='\n', cwd=cwd_path
+        )
+
+    output = re.split('>> | topotags in image.\n>>    TagID: |\n>>    Rotation: |\n\t\t|\n>>    Position: |   TagID: |\n\n', result.stdout)
+
+    filtered_output = []
+
+    for i in output:
+        if len(i) != 0 : filtered_output.append(i)
+
+    if len(filtered_output) > 0 and filtered_output[0] != '0 topotags in image.\n':
+        n_detection = int(filtered_output[0])
+
+        if n_detection > 0 :
+            ids, rvecs, tvecs = np.zeros(n_detection) ,np.zeros((n_detection,3)), np.zeros((n_detection,3))
+
+            for n in range(n_detection):
+                i = n * 5 + 1
+                ids[n] = filtered_output[i]
+                R = np.zeros((3,3))
+                R[0] = np.array(filtered_output[i+1].split(', '))
+                R[1] = np.array(filtered_output[i+2].split(', '))
+                R[2] = np.array(filtered_output[i+3].split(', '))
+
+                vec , _ = cv2.Rodrigues(R)
+                rvecs[n] = vec.squeeze()
+
+                tvecs[n] = np.array(filtered_output[i+4].split(', '))
+
+                if visualize == True:
+                    img_rgb = utils.drawCube(img_rgb, rvecs[n], tvecs[n], calib_mtx, dist_coef, cube_color, tag_size=tag_size)
+
+    return img_rgb

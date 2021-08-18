@@ -4,14 +4,15 @@ import pyrealsense2 as rs
 import utils, detectors, test
 
 is_april = 0     # Visualization color : RED 
-isAruCo = 1      # Visualization color : BLACK
+isAruCo = 0      # Visualization color : BLACK
 isCharuco = 0	 # Visualization color : WHITE
 isStag = 0       # Visualization color : BLUE
+is_topo = 1      # Visualization color : TURQUOISE
 
 is_visualize = True
 tag_size = 0.16 # in meters
 
-tester = test.Test(is_time = True, is_n_of_detections = True, is_jitter = True, tag_size=tag_size, is_memory = True, is_accuracy = True)
+tester = test.Test()
 
 calib_file_name = "D41517082021_192037.npz"
 calib_mtx, dist_coef = utils.getCalibData(calib_file_name)
@@ -46,28 +47,31 @@ while True:
 	detection_list = []
 	
 	" --- AprilTag --- "
-	if is_april == True:
+	if is_april:
 		img_rgb, april_detections = detectors.april_detector(img_rgb, img_gray,
 												 calib_mtx, dist_coef, tag_size = tag_size, visualize = is_visualize, cube_color = (255,0,0))
 		if april_detections is not None : detection_list.append(april_detections)
 
 	" --- ArUco --- "
-	if isAruCo == True:
+	if isAruCo:
 		img_rgb, aruco_detections = detectors.aruco_detector(img_rgb, img_gray,
 										calib_mtx, dist_coef, tag_size = tag_size, visualize=True, cube_color = (0,0,0))
 		if aruco_detections is not None : detection_list.append(aruco_detections)
 
 	" --- CharUco --- "
-	if isCharuco == True:
+	if isCharuco:
 		img_rgb, charuco_detections = detectors.charuco_detector(img_rgb, img_gray,
 								calib_mtx, dist_coef,  tag_size = tag_size, visualize=True, cube_color = (255,255,255), use_april_detecotor = False)
 		if charuco_detections is not None : detection_list.append(charuco_detections)
 
 	" --- STag --- "
-	if isStag == True:
+	if isStag:
 		img_rgb, stag_detections = detectors.stag_detector(img_rgb, img_gray,
 										calib_mtx, dist_coef, tag_size = tag_size, visualize=True, cube_color = (0,0,255), take_mean = True)
 		if stag_detections is not None : detection_list.append(stag_detections)
+
+	if is_topo:
+		img_rgb = detectors.topo_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size=tag_size, visualize=True)
 
 	tester.stop(detection_list)
 	# Display the result
