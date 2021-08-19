@@ -5,7 +5,7 @@ tagModelFile: "./TopoTag_3x3_circle_model.dat"      # [STRING]
 
 ## tag setup
 tagBitSize: 3
-tagLength: 0.16                                  # [DOUBLE] tag length of the white area, unit: m
+tagLength: 0.005                                  # [DOUBLE] tag length of the white area, unit: m
 
 ## camera calibration params
 cameraMatrix: !!opencv-matrix

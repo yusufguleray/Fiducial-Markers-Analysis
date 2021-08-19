@@ -6,13 +6,14 @@ import utils, detectors, test
 is_april = 0     # Visualization color : RED 
 isAruCo = 0      # Visualization color : BLACK
 isCharuco = 0	 # Visualization color : WHITE
-isStag = 1       # Visualization color : BLUE
-is_topo = 0      # Visualization color : TURQUOISE
+isStag = 0       # Visualization color : BLUE
+is_topo = 1      # Visualization color : TURQUOISE   dont forget to change the size in yml 
 
 is_visualize = True
-tag_size = 0.08 # in meters
+tag_size = 0.005 # in meters
 
-tester = test.Test(is_time = True, is_memory = True, is_jitter = True, is_accuracy = True, tag_size = tag_size, is_n_of_detections = True)
+#tester = test.Test(is_time = True, is_memory = True, is_jitter = True, is_accuracy = True, tag_size = tag_size, is_n_of_detections = True)  #Linux
+tester = test.Test(is_time = True, is_jitter = True, is_accuracy = True, tag_size = tag_size, is_n_of_detections = True)  #Windows
 
 calib_file_name = "D41517082021_192037.npz"
 calib_mtx, dist_coef = utils.getCalibData(calib_file_name)
@@ -35,8 +36,8 @@ print("Press [ESC] to close the application")
 
 "--- Data for testing ---"
 
-
-while True:
+is_stop = False
+while is_stop == False:
 
 	# Get frame from realsense and convert to grayscale image
 	frames = pipeline.wait_for_frames()
@@ -72,8 +73,9 @@ while True:
 
 	if is_topo:
 		img_rgb, topo_detections = detectors.topo_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size=tag_size, visualize=True)
+		if topo_detections is not None : detection_list.append(topo_detections)
 
-	tester.stop(detection_list)
+	is_stop = tester.stop(detection_list)
 	# Display the result
 	display_image = cv2.resize(img_rgb, (960, 540))
 	cv2.imshow("AR-Example", cv2.cvtColor(display_image, cv2.COLOR_RGB2BGR))

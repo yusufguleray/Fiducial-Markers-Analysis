@@ -4,10 +4,11 @@ import numpy as np
 import utils
 
 class Test:
-    def __init__(self, is_time = False, is_memory = False, is_jitter = False, is_accuracy = False, tag_size = 1, padding_ratio = 0.5, is_n_of_detections = False) -> None:
+    def __init__(self, is_time = False, is_memory = False, is_jitter = False, is_accuracy = False, tag_size = 1, padding_ratio = 0.5, is_n_of_detections = False, max_iter = 100) -> None:
         
         self.n_of_frames = 0
         self.tag_size = tag_size
+        self.max_iter = max_iter
 
         self.is_time, self.is_memory , self.is_jitter , self.is_accuracy , self.is_n_of_detections = False, False, False, False, False
         
@@ -47,7 +48,6 @@ class Test:
                 for i in range( self.array_size[0]):
                     self.map[j *  self.array_size[0] + i,0] = i * (tag_size + padding)
                     self.map[j *  self.array_size[0] + i,1] = - j * (tag_size + padding)
-                    pass
                     
 
         if is_n_of_detections:
@@ -119,7 +119,7 @@ class Test:
             if (ids is not None) and (rvecs is not None) and (tvecs is not None) and np.argwhere(ids == 0).size != 0:
                 mean_rvec = np.mean(rvecs, axis=0)
                 R, _ = cv2.Rodrigues(mean_rvec)
-                tvecs_origin_id0 = tvecs - tvecs[np.argwhere(ids == 0).squeeze()]
+                tvecs_origin_id0 = tvecs - tvecs[np.argwhere(ids == 0).squeeze()][0]    # Take the first id1 if multiples are detected 
                 tvecs_wrt_B = tvecs_origin_id0 @ R
 
                 id_dist = utils.distance_matrix(ids.reshape(-1, 1), np.arange(self.map.shape[0]).reshape(-1, 1))
@@ -137,12 +137,17 @@ class Test:
                 orientation_accuracy = utils.angle_error_rowwise(rvecs, np.ones((rvecs.shape[0], 1)) @ mean_rvec.reshape(1, -1))
                 self.orientation_accuracy_list.append(np.mean(orientation_accuracy))
 
+        if self.n_of_frames >= self.max_iter: return True
+        
+        return False
+
 
     def finalize(self):
 
         write_dict={}
 
         print("   ---   The results of the test   ---")
+        print("Number of frames :", self.n_of_frames)
 
         if self.is_time:
             time_np = np.array(self.duration_list)
@@ -181,16 +186,21 @@ class Test:
             write_dict['Average Orientational Jitter per Frame and Tag [degrees/(frame*tag)]'] = self.av_orientation_jitter*180/np.pi
 
         if self.is_accuracy:
-            position_accuracy_np = np.array(self.position_accuracy_bias_corrected_l)
-            self.av_position_accuracy = np.average(position_accuracy_np)
+
+            position_accuracy_naive_np = np.array(self.naive_position_accuracy_l)
+            self.av_position_accuracy_naive = np.average(position_accuracy_naive_np)
+
+            position_accuracy_bias_corrected_np = np.array(self.position_accuracy_bias_corrected_l)
+            self.av_position_accuracy_bias_corrected = np.average(position_accuracy_bias_corrected_np)
 
             orientation_accuracy_np = np.array(self.orientation_accuracy_list)
             self.av_orientation_accuracy= np.average(orientation_accuracy_np)
 
-            print('Average positional accuracy :', self.av_position_accuracy, 'meters/(tag*frame) |',self.av_position_accuracy*1000, 'milimeters/(tag*frame)')
+            print('Average positional accuracy :', self.av_position_accuracy_bias_corrected, 'meters/(tag*frame) |',self.av_position_accuracy_bias_corrected*1000, 'milimeters/(tag*frame)')
             print('Average orientational accuracy :', self.av_orientation_accuracy, 'rad/(tag*frame) |', self.av_orientation_accuracy*180/np.pi, 'degrees/(tag*frame)')
 
-            write_dict['Average Positional Accuracy per Frame and Tag [mm/(frame*tag)]'] = self.av_position_accuracy*1000
+            write_dict['Average Naive Positional Accuracy per Frame and Tag [mm/(frame*tag)]'] = self.av_position_accuracy_naive*1000
+            write_dict['Average Biased Corrected Positional Accuracy per Frame and Tag [mm/(frame*tag)]'] = self.av_position_accuracy_bias_corrected*1000
             write_dict['Average Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]'] = self.av_orientation_accuracy*180/np.pi
             write_dict['Array Size'] = self.array_size
 
@@ -199,7 +209,7 @@ class Test:
             import csv
             from pathlib import Path
 
-            filename = 'test3.csv'
+            filename = 'finaltest.csv'
             filepath = utils.get_test_path(filename)
             print('Results will be written in to :', filepath)
 
@@ -219,7 +229,8 @@ class Test:
                         'Average Positional Jitter per Frame and Tag [mm/(frame*tag)]', 
                         'Average Orientational Jitter per Frame and Tag [degrees/(frame*tag)]',
                         'Array Size', 
-                        'Average Positional Accuracy per Frame and Tag [mm/(frame*tag)]', 
+                        'Average Naive Positional Accuracy per Frame and Tag [mm/(frame*tag)]',
+                        'Average Biased Corrected Positional Accuracy per Frame and Tag [mm/(frame*tag)]', 
                         'Average Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]']
 
             if not Path(filepath).exists():

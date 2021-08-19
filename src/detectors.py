@@ -193,10 +193,8 @@ def charuco_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visu
         tag_ids = tag_ids.squeeze()
         number_of_charuco = int(np.ceil((np.max(tag_ids) + 1) / 18))
 
-        id = np.empty((number_of_charuco))
+        ids, rvecs, tvecs = [], [], []
         img_corners = np.empty((number_of_charuco, 23, 2))
-        rvec = np.empty((number_of_charuco, 3))
-        tvec = np.empty((number_of_charuco, 3))
 
         dictionary = cv2.aruco.Dictionary_get(cv2.aruco.DICT_APRILTAG_36h10)
         charUcoBoard = cv2.aruco.CharucoBoard_create(6, 6, tag_size / 6, tag_size / 6 * 0.8, dictionary)
@@ -214,15 +212,18 @@ def charuco_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visu
 
                 if (p_rvec is not None and p_tvec is not None) and (not np.isnan(p_rvec).any() and not np.isnan(p_tvec).any()):
                     
-                    id[i] = i
+                    
+                    ids.append(i)
                     # img_corners[i] = c_corners.squeeze()
-                    rvec[i] = p_rvec.squeeze()
-                    tvec[i] = p_tvec.squeeze()
+                    rvecs.append(p_rvec.squeeze())
+                    tvecs.append(p_tvec.squeeze())
                     if visualize == True:
                         img_rgb = utils.drawCube(img_rgb, p_rvec, p_tvec, calib_mtx, dist_coef, cube_color, tag_size, is_centered=False)
                         cv2.aruco.drawAxis(img_rgb, calib_mtx, dist_coef, p_rvec, p_tvec, tag_size)
 
-        detections = detections_writer(id, img_corners, rvec, tvec, tag_size, 'charuco_tag')
+        if len(ids) == 0 : return img_rgb, None
+        
+        detections = detections_writer(np.array(ids), img_corners, np.array(rvecs), np.array(tvecs), tag_size, 'charuco_tag')
         return img_rgb, detections
 
     return img_rgb, None
@@ -335,7 +336,9 @@ def topo_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visuali
                 R[1] = np.array(filtered_output[i+2].split(', '))
                 R[2] = np.array(filtered_output[i+3].split(', '))
 
-                vec , _ = cv2.Rodrigues(R)
+                x_180 = np.identity(3)
+                x_180[1,1], x_180[2,2] = -1, -1 
+                vec , _ = cv2.Rodrigues(R @ x_180)
                 rvecs[n] = vec.squeeze()
 
                 tvecs[n] = np.array(filtered_output[i+4].split(', '))
