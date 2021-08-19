@@ -94,7 +94,8 @@ def april_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visual
 
         if visualize == True:
             img_rgb = utils.drawCube(img_rgb, cur_rvec, cur_tvec, calib_mtx, dist_coef, cube_color = cube_color, tag_size = tag_size)
-        
+            cv2.aruco.drawAxis(img_rgb, calib_mtx, dist_coef, cur_rvec, cur_tvec, tag_size)
+
         id[i] = cur_id
         img_corners[i] = cur_corners
         rvec[i] = cur_rvec
@@ -143,7 +144,8 @@ def aruco_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visual
         
         if visualize == True:
             img_rgb = utils.drawCube(img_rgb, cur_rvec, cur_tvec, calib_mtx, dist_coef, cube_color, tag_size=tag_size)
-        
+            cv2.aruco.drawAxis(img_rgb, calib_mtx, dist_coef, cur_rvec, cur_tvec, tag_size)
+
         rvec[i] = cur_rvec
         tvec[i] = cur_tvec
 
@@ -218,7 +220,7 @@ def charuco_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visu
                     tvec[i] = p_tvec.squeeze()
                     if visualize == True:
                         img_rgb = utils.drawCube(img_rgb, p_rvec, p_tvec, calib_mtx, dist_coef, cube_color, tag_size, is_centered=False)
-                        # aruco.drawAxis(img_rgb, calib_mtx, dist_coef, p_rvec, p_tvec, 1)
+                        cv2.aruco.drawAxis(img_rgb, calib_mtx, dist_coef, p_rvec, p_tvec, tag_size)
 
         detections = detections_writer(id, img_corners, rvec, tvec, tag_size, 'charuco_tag')
         return img_rgb, detections
@@ -279,6 +281,7 @@ def stag_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visuali
 
         if visualize == True:
             img_rgb = utils.drawCube(img_rgb, cur_rvec, cur_tvec, calib_mtx, dist_coef, cube_color, tag_size=tag_size)
+            cv2.aruco.drawAxis(img_rgb, calib_mtx, dist_coef, cur_rvec, cur_tvec, tag_size)
 
         filtered_img_corners[i] = cur_img_corners
         rvec [i] = cur_rvec
@@ -339,6 +342,7 @@ def topo_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visuali
 
                 if visualize == True:
                     img_rgb = utils.drawCube(img_rgb, rvecs[n], tvecs[n], calib_mtx, dist_coef, cube_color, tag_size=tag_size)
+                    cv2.aruco.drawAxis(img_rgb, calib_mtx, dist_coef, rvecs[n], tvecs[n], tag_size)
 
         detections = detections_writer(ids, None, rvecs, tvecs, tag_size, 'topo')
         return img_rgb, detections

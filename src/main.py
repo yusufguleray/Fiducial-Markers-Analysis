@@ -6,13 +6,13 @@ import utils, detectors, test
 is_april = 0     # Visualization color : RED 
 isAruCo = 0      # Visualization color : BLACK
 isCharuco = 0	 # Visualization color : WHITE
-isStag = 0       # Visualization color : BLUE
-is_topo = 1      # Visualization color : TURQUOISE
+isStag = 1       # Visualization color : BLUE
+is_topo = 0      # Visualization color : TURQUOISE
 
 is_visualize = True
-tag_size = 0.16 # in meters
+tag_size = 0.08 # in meters
 
-tester = test.Test()
+tester = test.Test(is_time = True, is_memory = True, is_jitter = True, is_accuracy = True, tag_size = tag_size, is_n_of_detections = True)
 
 calib_file_name = "D41517082021_192037.npz"
 calib_mtx, dist_coef = utils.getCalibData(calib_file_name)
