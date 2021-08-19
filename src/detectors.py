@@ -340,4 +340,7 @@ def topo_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visuali
                 if visualize == True:
                     img_rgb = utils.drawCube(img_rgb, rvecs[n], tvecs[n], calib_mtx, dist_coef, cube_color, tag_size=tag_size)
 
-    return img_rgb
+        detections = detections_writer(ids, None, rvecs, tvecs, tag_size, 'topo')
+        return img_rgb, detections
+
+    return img_rgb, None

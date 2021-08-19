@@ -71,7 +71,7 @@ while True:
 		if stag_detections is not None : detection_list.append(stag_detections)
 
 	if is_topo:
-		img_rgb = detectors.topo_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size=tag_size, visualize=True)
+		img_rgb, topo_detections = detectors.topo_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size=tag_size, visualize=True)
 
 	tester.stop(detection_list)
 	# Display the result
