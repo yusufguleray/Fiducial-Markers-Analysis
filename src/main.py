@@ -7,7 +7,7 @@ is_april = 0     # Visualization color : RED
 isAruCo = 0      # Visualization color : BLACK
 isCharuco = 0	 # Visualization color : WHITE
 isStag = 0       # Visualization color : BLUE
-is_topo = 1      # Visualization color : TURQUOISE   dont forget to change the size in yml 
+is_topo = 0      # Visualization color : TURQUOISE   dont forget to change the size in yml 
 
 is_visualize = True
 tag_size = 0.005 # in meters

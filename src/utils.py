@@ -1,4 +1,4 @@
-import cv2
+import cv2, os
 import numpy as np	
 
 def drawCube(img_rgb, rvecs, tvecs, mtx, dist, cube_color = (255, 0, 0), tag_size = 1 ,is_centered = True):
@@ -155,21 +155,15 @@ def calibrator():
 			break
 
 def getCalibPath(filename):
-	import os
-
 	# Defines the path of the calibration file and the dictonary used
 	return os.path.join(os.path.split(os.path.dirname(__file__))[0], 'calibration','calibfiles', filename)
 
 def get_test_path(filename):
-	import os
-
 	# Defines the path of the calibration file and the dictonary used
 	return os.path.join(os.path.split(os.path.dirname(__file__))[0], 'testresults', filename)
 
 
 def displayCalibMat(filename, showmtx= True, showDist=True):
-	import os
-
 	# Defines the path of the calibration file and the dictonary used
 	calibration_path = os.path.join(os.path.split(os.path.dirname(__file__))[0], 'calibration','calibfiles', filename)
 
@@ -183,8 +177,6 @@ def displayCalibMat(filename, showmtx= True, showDist=True):
 	if showDist==True:print('Distortion Parameters : \n' ,dist,'\n')
 
 def getCalibData(filename):
-	import os
-
 	# Defines the path of the calibration file and the dictonary used
 	calibration_path = os.path.join(os.path.split(os.path.dirname(__file__))[0], 'calibration','calibfiles', filename)
 
@@ -311,3 +303,70 @@ def user_prompt(question: str) -> bool:
             return bool(strtobool(user_input))
         except ValueError:
             print("Please use y/n or yes/no.\n")
+
+class GetImages():
+	def __init__(self, is_camera = True, dataset_name = None):
+		if is_camera:
+			import pyrealsense2 as rs
+
+			self.is_camera = True
+
+			# Initialize communication with intel realsense
+			self.pipeline = rs.pipeline()
+			realsense_cfg = rs.config()
+			realsense_cfg.enable_stream(rs.stream.color, 1920, 1080, rs.format.rgb8, 30)
+			self.pipeline.start(realsense_cfg)
+
+			# Check communication
+			print("Testing the connection with the camera...")
+			try:
+				np.asanyarray(self.pipeline.wait_for_frames().get_color_frame().get_data())
+			except:
+				raise Exception("Can't get rgb frame from camera")
+
+			print("Connection with the camera is succesful!")
+
+		else:
+			self.is_camera = False   #use dataset
+			self.dataset_folder_path = os.path.join(os.path.split(os.path.dirname(__file__))[0], 'datasets', dataset_name)
+			file_list = os.listdir(self.dataset_folder_path)
+			self.filtered_file_list = [k for k in file_list if ".png" in k]
+			self.i = 0
+
+	def get_image(self):
+		if self.is_camera:
+			frames = self.pipeline.wait_for_frames()
+			img_rgb = np.asanyarray(frames.get_color_frame().get_data())
+
+			return img_rgb
+		
+		else:
+			if self.i >= len(self.filtered_file_list):
+				raise StopIteration
+			else:
+				img_rgb = cv2.imread(os.path.join(self.dataset_folder_path, self.filtered_file_list[self.i]))
+				self.i += 1
+				return img_rgb 
+
+def record_dataset(folder_name, n_of_image = 100, file_name = None):
+	import pathlib
+
+	if file_name == None : file_name = folder_name
+	file_id_padding = 5
+
+	dataset_folder_path = os.path.join(os.path.split(os.path.dirname(__file__))[0], 'datasets', folder_name)
+	pathlib.Path(dataset_folder_path).mkdir(parents=True, exist_ok=True)
+
+	get_image = GetImages(is_camera = True)
+
+	for i in range(n_of_image):
+		img_rgb = get_image.get_image()
+		cv2.imwrite(os.path.join(dataset_folder_path, file_name + "_{:>0{}}.png".format(i, file_id_padding)), img_rgb)
+
+def display_dataset(folder_name, n):
+	get_image = GetImages(False, folder_name)
+
+	for i in range(n):
+		cv2.imshow(folder_name, cv2.cvtColor(get_image.get_image(), cv2.COLOR_RGB2BGR))
+		cv2.waitKey(0) 
+	cv2.destroyAllWindows() 

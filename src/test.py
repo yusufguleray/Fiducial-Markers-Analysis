@@ -4,7 +4,7 @@ import numpy as np
 import utils
 
 class Test:
-    def __init__(self, is_time = False, is_memory = False, is_jitter = False, is_accuracy = False, tag_size = 1, padding_ratio = 0.5, is_n_of_detections = False, max_iter = 100) -> None:
+    def __init__(self, is_time = False, is_memory = False, is_jitter = False, is_accuracy = False, tag_size = 1, padding_ratio = 0.5, is_n_of_detections = False, max_iter = 10000) -> None:
         
         self.n_of_frames = 0
         self.tag_size = tag_size
