@@ -1,37 +1,25 @@
+# Resolution : 1920 x 1080
+
 import cv2
-import numpy as np
-import pyrealsense2 as rs
 import utils, detectors, test
 
 is_april = 0     # Visualization color : RED 
-isAruCo = 0      # Visualization color : BLACK
+isAruCo = 1      # Visualization color : BLACK
 isCharuco = 0	 # Visualization color : WHITE
 isStag = 0       # Visualization color : BLUE
 is_topo = 0      # Visualization color : TURQUOISE   dont forget to change the size in yml 
 
 is_visualize = True
-tag_size = 0.005 # in meters
+tag_size = 0.04 # in meters
 
 #tester = test.Test(is_time = True, is_memory = True, is_jitter = True, is_accuracy = True, tag_size = tag_size, is_n_of_detections = True)  #Linux
-tester = test.Test(is_time = True, is_jitter = True, is_accuracy = True, tag_size = tag_size, is_n_of_detections = True)  #Windows
+tester = test.Test(tag_size = tag_size, is_memory = False)  #Windows
 
 calib_file_name = "D41517082021_192037.npz"
 calib_mtx, dist_coef = utils.getCalibData(calib_file_name)
 
-# Initialize communication with intel realsense
-pipeline = rs.pipeline()
-realsense_cfg = rs.config()
-realsense_cfg.enable_stream(rs.stream.color, 1920, 1080, rs.format.rgb8, 30)
-pipeline.start(realsense_cfg)
+get_image = utils.GetImages(is_camera=False, dataset_name="aruco_4cm")
 
-# Check communication
-print("Testing the connection with the camera...")
-try:
-	np.asanyarray(pipeline.wait_for_frames().get_color_frame().get_data())
-except:
-	raise Exception("Can't get rgb frame from camera")
-
-print("Connection with the camera is succesful!")
 print("Press [ESC] to close the application")
 
 "--- Data for testing ---"
@@ -40,8 +28,7 @@ is_stop = False
 while is_stop == False:
 
 	# Get frame from realsense and convert to grayscale image
-	frames = pipeline.wait_for_frames()
-	img_rgb = np.asanyarray(frames.get_color_frame().get_data())
+	img_rgb = get_image.get_image()
 	img_gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
 
 	tester.start()
@@ -71,6 +58,7 @@ while is_stop == False:
 										calib_mtx, dist_coef, tag_size = tag_size, visualize=True, cube_color = (0,0,255), take_mean = True)
 		if stag_detections is not None : detection_list.append(stag_detections)
 
+	" --- TopoTag --- "
 	if is_topo:
 		img_rgb, topo_detections = detectors.topo_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size=tag_size, visualize=True)
 		if topo_detections is not None : detection_list.append(topo_detections)
@@ -78,7 +66,7 @@ while is_stop == False:
 	is_stop = tester.stop(detection_list)
 	# Display the result
 	display_image = cv2.resize(img_rgb, (960, 540))
-	cv2.imshow("AR-Example", cv2.cvtColor(display_image, cv2.COLOR_RGB2BGR))
+	cv2.imshow("Fiducial Markers", cv2.cvtColor(display_image, cv2.COLOR_RGB2BGR))
 	
 
 	# If [ESC] pressed, close the application

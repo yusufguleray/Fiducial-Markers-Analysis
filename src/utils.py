@@ -330,6 +330,7 @@ class GetImages():
 			self.is_camera = False   #use dataset
 			self.dataset_folder_path = os.path.join(os.path.split(os.path.dirname(__file__))[0], 'datasets', dataset_name)
 			file_list = os.listdir(self.dataset_folder_path)
+			print("Path of the dataset to be used :", self.dataset_folder_path)
 			self.filtered_file_list = [k for k in file_list if ".png" in k]
 			self.i = 0
 
@@ -342,7 +343,7 @@ class GetImages():
 		
 		else:
 			if self.i >= len(self.filtered_file_list):
-				raise StopIteration
+				raise Exception("No more image left in the dataset!")
 			else:
 				img_rgb = cv2.imread(os.path.join(self.dataset_folder_path, self.filtered_file_list[self.i]))
 				self.i += 1
