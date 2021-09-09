@@ -119,20 +119,31 @@ class Test:
             if (ids is not None) and (rvecs is not None) and (tvecs is not None) and np.argwhere(ids == 0).size != 0:
                 mean_rvec = np.mean(rvecs, axis=0)
                 R, _ = cv2.Rodrigues(mean_rvec)
-                tvecs_origin_id0 = tvecs - tvecs[np.argwhere(ids == 0).squeeze()][0]    # Take the first id1 if multiples are detected 
-                tvecs_wrt_B = tvecs_origin_id0 @ R
 
                 id_dist = utils.distance_matrix(ids.reshape(-1, 1), np.arange(self.map.shape[0]).reshape(-1, 1))
                 indices = (np.argwhere(id_dist == 0)).T
                 cur_id_match_indices = indices[0]
                 map_id_match_indices = indices[1]
 
-                naive_position_accuracy = utils.elementwise_distance(tvecs_wrt_B[cur_id_match_indices], self.map[map_id_match_indices])
-                self.naive_position_accuracy_l.append(np.mean(naive_position_accuracy))
+                distances_list = []
 
-                bias = np.mean(tvecs_wrt_B[cur_id_match_indices]-self.map[map_id_match_indices], axis=0)
-                position_accuracy_bias_corrected = utils.elementwise_distance(tvecs_wrt_B[cur_id_match_indices]-bias, self.map[map_id_match_indices])
-                self.position_accuracy_bias_corrected_l.append(np.mean(position_accuracy_bias_corrected))
+                for origin_id in cur_id_match_indices:
+                    
+                    origin_tvec = tvecs[np.argwhere(ids == origin_id).squeeze()]
+                    if len(origin_tvec.shape) == 2 : origin_tvec = origin_tvec[0] # Take the first row if multiple of same id is detected 
+                    tvecs_wrt_origin_id = tvecs - origin_tvec
+                    tvecs_wrt_B = tvecs_wrt_origin_id @ R
+
+                    map_wrt_B = self.map - self.map[origin_id]
+
+                    naive_position_accuracy = utils.elementwise_distance(tvecs_wrt_B[cur_id_match_indices], map_wrt_B[map_id_match_indices])
+                    distances_list.append(np.mean(naive_position_accuracy))
+
+                    # bias = np.mean(tvecs_wrt_B[cur_id_match_indices]-map_wrt_B[map_id_match_indices], axis=0)
+                    # position_accuracy_bias_corrected = utils.elementwise_distance(tvecs_wrt_B[cur_id_match_indices]-bias, self.map[map_id_match_indices])
+                    # self.position_accuracy_bias_corrected_l.append(np.mean(position_accuracy_bias_corrected))
+                
+                self.naive_position_accuracy_l.append(np.mean(distances_list))
 
                 orientation_accuracy = utils.angle_error_rowwise(rvecs, np.ones((rvecs.shape[0], 1)) @ mean_rvec.reshape(1, -1))
                 self.orientation_accuracy_list.append(np.mean(orientation_accuracy))
@@ -190,17 +201,17 @@ class Test:
             position_accuracy_naive_np = np.array(self.naive_position_accuracy_l)
             self.av_position_accuracy_naive = np.average(position_accuracy_naive_np)
 
-            position_accuracy_bias_corrected_np = np.array(self.position_accuracy_bias_corrected_l)
-            self.av_position_accuracy_bias_corrected = np.average(position_accuracy_bias_corrected_np)
+            # position_accuracy_bias_corrected_np = np.array(self.position_accuracy_bias_corrected_l)
+            # self.av_position_accuracy_bias_corrected = np.average(position_accuracy_bias_corrected_np)
 
             orientation_accuracy_np = np.array(self.orientation_accuracy_list)
             self.av_orientation_accuracy= np.average(orientation_accuracy_np)
 
-            print('Average positional accuracy :', self.av_position_accuracy_bias_corrected, 'meters/(tag*frame) |',self.av_position_accuracy_bias_corrected*1000, 'milimeters/(tag*frame)')
+            print('Average positional accuracy :', self.av_position_accuracy_naive, 'meters/(tag*frame) |',self.av_position_accuracy_naive*1000, 'milimeters/(tag*frame)')
             print('Average orientational accuracy :', self.av_orientation_accuracy, 'rad/(tag*frame) |', self.av_orientation_accuracy*180/np.pi, 'degrees/(tag*frame)')
 
             write_dict['Average Naive Positional Accuracy per Frame and Tag [mm/(frame*tag)]'] = self.av_position_accuracy_naive*1000
-            write_dict['Average Biased Corrected Positional Accuracy per Frame and Tag [mm/(frame*tag)]'] = self.av_position_accuracy_bias_corrected*1000
+            # write_dict['Average Biased Corrected Positional Accuracy per Frame and Tag [mm/(frame*tag)]'] = self.av_position_accuracy_bias_corrected*1000
             write_dict['Average Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]'] = self.av_orientation_accuracy*180/np.pi
             write_dict['Array Size'] = self.array_size
 
