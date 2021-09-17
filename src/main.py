@@ -4,9 +4,9 @@ import cv2
 import utils, detectors, test
 
 is_april = 0     # Visualization color : RED 
-isAruCo = 1      # Visualization color : BLACK
+isAruCo = 0      # Visualization color : BLACK
 isCharuco = 0	 # Visualization color : WHITE
-isStag = 0       # Visualization color : BLUE
+isStag = 1       # Visualization color : BLUE
 is_topo = 0      # Visualization color : TURQUOISE   dont forget to change the size in yml 
 
 is_visualize = True
@@ -15,10 +15,10 @@ tag_size = 0.02 # in meters
 #tester = test.Test(is_time = True, is_memory = True, is_jitter = True, is_accuracy = True, tag_size = tag_size, is_n_of_detections = True)  #Linux
 tester = test.Test(tag_size = tag_size, is_memory = False)  #Windows
 
-calib_file_name = "D41517082021_192037.npz"
+calib_file_name = "d415_170921.npz"
 calib_mtx, dist_coef = utils.getCalibData(calib_file_name)
 
-get_image = utils.GetImages(is_camera=False, dataset_name="aruco_2cm")
+get_image = utils.GetImages(is_camera=False, dataset_name="stag_2cm")
 
 print("Press [ESC] to close the application")
 
