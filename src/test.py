@@ -116,7 +116,7 @@ class Test:
                 for detection in detections:
                     ids, rvecs, tvecs = detection['ids'], detection['rvecs'], detection['tvecs']
 
-            if (ids is not None) and (rvecs is not None) and (tvecs is not None) and np.argwhere(ids == 0).size != 0:
+            if (ids is not None) and (rvecs is not None) and (tvecs is not None):
                 mean_rvec = np.mean(rvecs, axis=0)
                 R, _ = cv2.Rodrigues(mean_rvec)
 
