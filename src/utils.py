@@ -371,3 +371,43 @@ def display_dataset(folder_name, n):
 		cv2.imshow(folder_name, cv2.cvtColor(get_image.get_image(), cv2.COLOR_RGB2BGR))
 		cv2.waitKey(0) 
 	cv2.destroyAllWindows() 
+
+def image_saver(folder_name = None, wait_time = 5):
+	import time, pathlib
+	
+	if folder_name == None: folder_name = input("What should the folder name for the images to be saved ? : ")
+	get_image = GetImages(is_camera=True)
+		
+	image_folder_path = os.path.join(os.path.split(os.path.dirname(__file__))[0], 'calibration', 'calibration_images', folder_name)
+	pathlib.Path(image_folder_path).mkdir(parents=True, exist_ok=True)
+	print("Images will be saved to :", image_folder_path)
+	
+	img_counter = 0
+	start_time = time.time()
+
+	print("Press [ESC] to close the application")
+
+	while True:
+		img_rgb = get_image.get_image()
+		display_image = cv2.resize(img_rgb, (960, 540))
+
+		remaining_time = str(wait_time - (time.time() - start_time))[0] + ' second(s) left'
+		info = str(img_counter) + ' image(s) captured'
+
+		#--- Position the time at (10, 70) coordinate with certain font style, size and color ---
+		cv2.putText(display_image, remaining_time + " | " + info , (10,70), cv2.FONT_HERSHEY_SIMPLEX, 1.5,(15,200,15),2,cv2.LINE_AA)
+		cv2.imshow("Image Saver", cv2.cvtColor(display_image, cv2.COLOR_RGB2BGR))
+
+		if time.time() - start_time >= wait_time: # Check if 5 wait time is passed
+			img_name = "image_{:>0{}}.png".format(img_counter, 3)
+
+			cv2.imwrite(os.path.join(image_folder_path, img_name), cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR))
+			print("{} written!".format(img_name))
+			start_time = time.time()
+			img_counter += 1
+		
+		# If [ESC] pressed, close the application
+		if cv2.waitKey(100) == 27:
+			print("Application closed")
+			break
+	cv2.destroyAllWindows()

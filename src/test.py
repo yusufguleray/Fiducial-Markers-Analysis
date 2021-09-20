@@ -127,10 +127,11 @@ class Test:
 
                 distances_list = []
 
-                for origin_id in cur_id_match_indices:
+                for origin_id in map_id_match_indices:
                     
                     origin_tvec = tvecs[np.argwhere(ids == origin_id).squeeze()]
-                    if len(origin_tvec.shape) == 2 : origin_tvec = origin_tvec[0] # Take the first row if multiple of same id is detected 
+                    if len(origin_tvec.shape) == 2 : 
+                        origin_tvec = origin_tvec[0] # Take the first row if multiple of same id is detected 
                     tvecs_wrt_origin_id = tvecs - origin_tvec
                     tvecs_wrt_B = tvecs_wrt_origin_id @ R
 
