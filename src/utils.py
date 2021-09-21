@@ -411,3 +411,48 @@ def image_saver(folder_name = None, wait_time = 5):
 			print("Application closed")
 			break
 	cv2.destroyAllWindows()
+
+def flip_check(detection_list):
+	
+	for detection in detection_list:
+		rvecs = detection['rvecs']
+		tvecs = detection['tvecs']
+		n = rvecs.shape[0]
+
+		flipped_ids = []
+		same_for_21 = []
+		
+		for i in range(n):
+			R = cv2.Rodrigues(rvecs[i])[0]
+			
+			if R[1,2] > 0: 
+				flipped_ids.append(int(detection['ids'][i]))
+
+				if R[2,1] < 0: same_for_21.append(True)
+				else: same_for_21.append(False)
+		
+		print(flipped_ids, same_for_21)
+			# T = tvecs[0,0]
+			# R = cv2.Rodrigues(rvecs[0])[0]
+			# # Unrelated -- makes Y the up axis, Z forward
+			# R = R @ np.array([
+			# 	[1, 0, 0],
+			# 	[0, 0, 1],
+			# 	[0,-1, 0],
+			# ])
+			# if 0 < R[1,1] < 1:
+			# 	# If it gets here, the pose is flipped.
+
+			# 	# Flip the axes. E.g., Y axis becomes [-y0, -y1, y2].
+			# 	R *= np.array([
+			# 		[ 1, -1,  1],
+			# 		[ 1, -1,  1],
+			# 		[-1,  1, -1],
+			# 	])
+				
+			# 	# Fixup: rotate along the plane spanned by camera's forward (Z) axis and vector to marker's position
+			# 	forward = np.array([0, 0, 1])
+			# 	tnorm = T / np.linalg.norm(T)
+			# 	axis = np.cross(tnorm, forward)
+			# 	angle = -2*math.acos(tnorm @ forward)
+			# 	R = cv2.Rodrigues(angle * axis)[0] @ R
