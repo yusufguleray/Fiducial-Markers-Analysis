@@ -4,13 +4,14 @@ import numpy as np
 import utils
 
 class Test:
-    def __init__(self, tag_size = 1, max_iter = 100, padding_ratio = 0.5, is_time = True, is_memory = True, is_jitter = True, is_accuracy = True,  is_n_of_detections = True) -> None:
+    def __init__(self, tag_size = 1, max_iter = 100, padding_ratio = 0.5, is_time = True, is_memory = True, is_jitter = True, 
+                is_accuracy = True,  is_n_of_detections = True, is_ambiguity=True, is_record=True, record_file = 'test_results.csv', record_name = None ) -> None:
         
         self.n_of_frames = 0
         self.tag_size = tag_size
         self.max_iter = max_iter
 
-        self.is_time, self.is_memory , self.is_jitter , self.is_accuracy , self.is_n_of_detections = False, False, False, False, False
+        self.is_time, self.is_memory , self.is_jitter , self.is_accuracy , self.is_n_of_detections, self.is_ambiguity, self.is_record = False, False, False, False, False, False, False
         
         if is_time:
             self.is_time = True
@@ -49,11 +50,19 @@ class Test:
                     self.map[j *  self.array_size[0] + i,0] = i * (tag_size + padding)
                     self.map[j *  self.array_size[0] + i,1] = - j * (tag_size + padding)
                     
-
         if is_n_of_detections:
             self.is_n_of_detections = True
             self.av_n_of_detections = 0
             self.av_n_of_detections_list = []
+
+        if is_ambiguity: 
+            self.is_ambiguity = True
+            self.n_of_ambiguity = []
+
+        if is_record:
+            self.is_record = True
+            self.record_file = record_file
+            self.record_name = record_name
 
     def start(self):
 
@@ -79,15 +88,14 @@ class Test:
             n_of_detection = 0
 
             for detection in detections:
-                if detection['ids'] is not None :
-                    n_of_detection = n_of_detection + len(detection['ids'])
+                if detection['ids'] is not None:
+                    n_of_detection = n_of_detection + detection['ids'].size
 
             self.av_n_of_detections = self.av_n_of_detections + 1/self.n_of_frames*(n_of_detection - self.av_n_of_detections)
 
         ids, rvecs, tvecs = None, None, None
         
         if self.is_jitter:
-            #TODO : make ids, rvecs, tvecs dict such that it wil work with multiple detectors
             
             for detection in detections:
                 ids, rvecs, tvecs = detection['ids'], detection['rvecs'], detection['tvecs']
@@ -110,6 +118,8 @@ class Test:
 
             self.prev_ids, self.prev_rvecs, self.prev_tvecs  = ids, rvecs, tvecs  
 
+        flipped_ids = None
+
         if self.is_accuracy:
 
             if (ids is None) or (rvecs is None) or (tvecs is None):
@@ -117,9 +127,12 @@ class Test:
                     ids, rvecs, tvecs = detection['ids'], detection['rvecs'], detection['tvecs']
 
             if (ids is not None) and (rvecs is not None) and (tvecs is not None):
-                mean_rvec = np.mean(rvecs, axis=0)
+                
+                flipped_ids = utils.find_ambiguity(ids, rvecs, tvecs)
+                mean_rvec = np.mean(rvecs[np.bitwise_not(np.in1d(ids, flipped_ids))], axis=0) #consider only non flipped ids
                 R, _ = cv2.Rodrigues(mean_rvec)
 
+                # Finds the matching indices between the map and the tvecs
                 id_dist = utils.distance_matrix(ids.reshape(-1, 1), np.arange(self.map.shape[0]).reshape(-1, 1))
                 indices = (np.argwhere(id_dist == 0)).T
                 cur_id_match_indices = indices[0]
@@ -128,7 +141,6 @@ class Test:
                 distances_list = []
 
                 for origin_id in map_id_match_indices:
-                    
                     origin_tvec = tvecs[np.argwhere(ids == origin_id).squeeze()]
                     if len(origin_tvec.shape) == 2 : 
                         origin_tvec = origin_tvec[0] # Take the first row if multiple of same id is detected 
@@ -148,6 +160,15 @@ class Test:
 
                 orientation_accuracy = utils.angle_error_rowwise(rvecs, np.ones((rvecs.shape[0], 1)) @ mean_rvec.reshape(1, -1))
                 self.orientation_accuracy_list.append(np.mean(orientation_accuracy))
+
+        if self.is_ambiguity:
+            if (ids is None) or (rvecs is None) or (tvecs is None):
+                for detection in detections:
+                    ids, rvecs, tvecs = detection['ids'], detection['rvecs'], detection['tvecs']
+            if flipped_ids is None:
+                flipped_ids = utils.find_ambiguity(ids, rvecs, tvecs)
+
+            self.n_of_ambiguity.append(len(flipped_ids))
 
         if self.n_of_frames >= self.max_iter: return True
         
@@ -216,18 +237,25 @@ class Test:
             write_dict['Average Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]'] = self.av_orientation_accuracy*180/np.pi
             write_dict['Array Size'] = self.array_size
 
+        if self.is_ambiguity:
+            n_of_ambiguity_np = np.array(self.n_of_ambiguity)
+            ambiguity_percent = np.average(n_of_ambiguity_np) / self.av_n_of_detections * 100
 
-        if utils.user_prompt("Should the data be recorded recorded?"):
+            print('Ambiguety Percent(Number of Flipped Detections/Total Number of Detections) :', ambiguity_percent)
+            
+            write_dict['Ambiguety Percent(Number of Flipped Detections/Total Number of Detections)'] = ambiguity_percent
+            
+
+        if self.is_record or utils.user_prompt("Should the data be recorded recorded?"):
             import csv
             from pathlib import Path
 
-            filename = 'finaltest.csv'
-            filepath = utils.get_test_path(filename)
+            filepath = utils.get_test_path(self.record_file)
             print('Results will be written in to :', filepath)
 
-            test_name = input("What should be the name of these records? : ")
+            if self.record_name is None : self.record_name = input("What should be the name of these records? : ")
 
-            write_dict['Test Name'] = test_name
+            write_dict['Test Name'] = self.record_name
             write_dict['Tag Size [cm]'] = self.tag_size*100
             write_dict['Total Number of Frames'] = self.n_of_frames
                         
@@ -243,7 +271,8 @@ class Test:
                         'Array Size', 
                         'Average Naive Positional Accuracy per Frame and Tag [mm/(frame*tag)]',
                         'Average Biased Corrected Positional Accuracy per Frame and Tag [mm/(frame*tag)]', 
-                        'Average Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]']
+                        'Average Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]',
+                        'Ambiguety Percent(Number of Flipped Detections/Total Number of Detections)']
 
             if not Path(filepath).exists():
                 print('New csv file created :', filepath)
@@ -258,4 +287,4 @@ class Test:
 
                 writer.writerow(write_dict)
 
-            print(test_name,'is succesfully written into', filepath)
+            print(self.record_name,'is succesfully written into', filepath)
