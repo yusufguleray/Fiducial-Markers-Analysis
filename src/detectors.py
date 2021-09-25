@@ -182,10 +182,11 @@ def charuco_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visu
               
     if use_april_detecotor == True:
         tag_ids, corners = april_detector(img_rgb, img_gray,calib_mtx,dist_coef,tag_size, tag_family = 'tag36h10', just_img_corners = True)
+        tag_ids = tag_ids.astype(np.int32)
     else :
         corners, tag_ids, rejected_points = cv2.aruco.detectMarkers(img_gray, cv2.aruco.getPredefinedDictionary(tag_family))
 
-    if (len(corners) == 0) : return img_rgb, None # No detections
+    if corners is None or (len(corners) == 0) : return img_rgb, None # No detections
 
     if (corners is not None and tag_ids is not None) and (len(corners) == len(tag_ids) and len(corners) != 0):
         
@@ -204,7 +205,7 @@ def charuco_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visu
             indices = (tag_ids >= 18 * i) & (tag_ids < (18 * (i + 1)))
 
             if np.any(indices == True): 
-                cur_corners = corners[indices]
+                cur_corners = corners[indices].squeeze().astype(np.float32)
                 cur_ids = tag_ids[indices] - 18 * i
 
                 ret1, c_corners, c_ids = cv2.aruco.interpolateCornersCharuco(cur_corners, cur_ids, img_gray, charUcoBoard)
