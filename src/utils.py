@@ -420,6 +420,8 @@ def unwrap(rvecs):
 
 def find_ambiguity(ids, rvecs, tvecs):
 	
+	if ids is None: return []
+
 	n = ids.size
 	flipped_ids = []
 	
@@ -431,50 +433,14 @@ def find_ambiguity(ids, rvecs, tvecs):
 
 	return flipped_ids
 
-# def flip_check(detection_list, img_rgb, calib_mtx, dist_coef, tag_size=1):
-	
-# 	for detection in detection_list:
-# 		rvecs = unwrap(detection['rvecs'])
-# 		tvecs = detection['tvecs']
-# 		n = rvecs.shape[0]
+def boxplot_data(data):
+	if data.size == 0 : return None
+	data_dict = {}
+	data_dict['median'] = np.median(data)
+	data_dict['average'] = np.average(data)
+	data_dict['upper_quartile'] = np.percentile(data, 75)
+	data_dict['lower_quartile'] = np.percentile(data, 25)
+	data_dict['max'] = np.max(data)
+	data_dict['min'] = np.min(data)
 
-# 		flipped_ids = []
-# 		same_for_21 = []
-		
-# 		for i in range(n):
-# 			R = cv2.Rodrigues(rvecs[i])[0]
-			
-# 			if R[1,2] > 0: 
-# 				flipped_ids.append(int(detection['ids'][i]))
-
-# 				if R[2,1] < 0: same_for_21.append(True)
-# 				else: same_for_21.append(False)
-		
-# 		flipped_rvecs = rvecs[np.in1d(detection['ids'],flipped_ids)]
-# 		correct_rvecs = rvecs[np.bitwise_and(np.bitwise_not(np.in1d(detection['ids'],flipped_ids)),detection['ids']<9)]
-
-# 		flipped_rvecs_mean = np.average(flipped_rvecs, axis=0)
-# 		correct_rvecs_mean = np.average(correct_rvecs, axis=0)
-# 		angle_difference = angle_error(flipped_rvecs_mean, correct_rvecs_mean)
-		
-# 		for correction but doesnt work
-# 		for id in flipped_ids:
-# 			rvec = rvecs[detection['ids']==id]
-# 			tvec = tvecs[detection['ids']==id]
-# 			R = cv2.Rodrigues(rvec)[0]
-				
-# 			forward = np.array([0, 0, 1])
-
-# 			# tnorm = tvec / np.linalg.norm(tvec)
-# 			# axis = np.cross(tnorm, forward)
-# 			# angle = -2 * np.arccos(tnorm @ forward)
-
-# 			z = R[:,2]
-# 			axis = np.cross(forward, z)
-# 			angle = 2 * angle_error(z, forward)
-
-# 			corrected_R = cv2.Rodrigues(angle * axis)[0] @ R
-# 			corrected_rvec = cv2.Rodrigues(corrected_R)[0]
-# 			img_rgb = drawCube(img_rgb, corrected_rvec, tvec, calib_mtx, dist_coef, cube_color=(255,0,0), tag_size=tag_size)
-# 			cv2.aruco.drawAxis(img_rgb, calib_mtx, dist_coef, corrected_rvec, tvec, tag_size)
-# 	return img_rgb
+	return data_dict

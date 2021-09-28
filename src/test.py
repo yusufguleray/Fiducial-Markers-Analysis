@@ -15,13 +15,11 @@ class Test:
         
         if is_time:
             self.is_time = True
-            self.av_time, self.cur_time = 0, 0
+            self.cur_time = 0
             self.duration_list = []
 
         if is_memory:
             self.is_memory = True
-            self.av_memory_consumption = 0
-            self.cur_memory = 0
             self.memory_consumption_list = []
 
         if is_jitter:
@@ -30,18 +28,18 @@ class Test:
             self.prev_ids, self.prev_rvecs, self.prev_tvecs = None, None, None
             self.position_jitter_list, self.orientation_jitter_list = [], []
 
+        padding = tag_size * padding_ratio
+
+        if tag_size == 0.16 : self.array_size = [1,1]
+        if tag_size == 0.08 : self.array_size = [2,1]
+        if tag_size == 0.04 : self.array_size = [4,3]
+        if tag_size == 0.02 : self.array_size = [9,6]
+        if tag_size == 0.01 : self.array_size = [16,8]
+        if tag_size == 0.005 : self.array_size = [16,8]
+        
         if is_accuracy:
             self.is_accuracy = True
-            self.naive_position_accuracy_l, self.position_accuracy_bias_corrected_l, self.orientation_accuracy_list = [], [], []
-            
-            padding = tag_size * padding_ratio
-
-            if tag_size == 0.16 : self.array_size = [1,1]
-            if tag_size == 0.08 : self.array_size = [2,1]
-            if tag_size == 0.04 : self.array_size = [4,3]
-            if tag_size == 0.02 : self.array_size = [9,6]
-            if tag_size == 0.01 : self.array_size = [16,8]
-            if tag_size == 0.005 : self.array_size = [16,8]
+            self.position_accuracy_list, self.position_accuracy_bias_corrected_l, self.orientation_accuracy_list = [], [], []
     
             self.map = np.zeros(( self.array_size[0] *  self.array_size[1], 3)) # tvecs wrt Tag 1 (Top left)
 
@@ -52,8 +50,7 @@ class Test:
                     
         if is_n_of_detections:
             self.is_n_of_detections = True
-            self.av_n_of_detections = 0
-            self.av_n_of_detections_list = []
+            self.n_of_detections_list = []
 
         if is_ambiguity: 
             self.is_ambiguity = True
@@ -91,7 +88,7 @@ class Test:
                 if detection['ids'] is not None:
                     n_of_detection = n_of_detection + detection['ids'].size
 
-            self.av_n_of_detections = self.av_n_of_detections + 1/self.n_of_frames*(n_of_detection - self.av_n_of_detections)
+            self.n_of_detections_list.append(n_of_detection)
 
         ids, rvecs, tvecs = None, None, None
         
@@ -109,16 +106,13 @@ class Test:
                 prev_id_match_indices = indices[1]
                 
                 positional_jitter = utils.elementwise_distance(self.prev_tvecs[prev_id_match_indices], tvecs[cur_id_match_indices])
-                cur_av_positional_jitter = np.mean(positional_jitter)  # Average of all the tags
-                self.position_jitter_list.append(cur_av_positional_jitter)
+                self.position_jitter_list.extend(positional_jitter.tolist())
 
                 orientation_jitter = utils.angle_error_rowwise(self.prev_rvecs[prev_id_match_indices], rvecs[cur_id_match_indices])
-                cur_av_orientational_jitter = np.mean(orientation_jitter)
-                self.orientation_jitter_list.append(cur_av_orientational_jitter)
+                self.orientation_jitter_list.extend(orientation_jitter.tolist())
 
             self.prev_ids, self.prev_rvecs, self.prev_tvecs  = ids, rvecs, tvecs  
 
-        flipped_ids = None
 
         if self.is_accuracy:
 
@@ -133,7 +127,10 @@ class Test:
                 R, _ = cv2.Rodrigues(mean_rvec)
 
                 # Finds the matching indices between the map and the tvecs
-                id_dist = utils.distance_matrix(ids.reshape(-1, 1), np.arange(self.map.shape[0]).reshape(-1, 1))
+                if self.record_name == 'charuco_4cm' : 
+                    map_ids = np.array([0,1,10,11,2,3,4,5,6,7,8,9])
+                    id_dist = utils.distance_matrix(ids.reshape(-1, 1), map_ids.reshape(-1, 1))
+                else :id_dist = utils.distance_matrix(ids.reshape(-1, 1), np.arange(self.map.shape[0]).reshape(-1, 1))
                 indices = (np.argwhere(id_dist == 0)).T
                 cur_id_match_indices = indices[0]
                 map_id_match_indices = indices[1]
@@ -146,20 +143,24 @@ class Test:
                         origin_tvec = origin_tvec[0] # Take the first row if multiple of same id is detected 
                     tvecs_wrt_origin_id = tvecs - origin_tvec
                     tvecs_wrt_B = tvecs_wrt_origin_id @ R
-
-                    map_wrt_B = self.map - self.map[origin_id]
+                    
+                    if self.record_name == 'charuco_4cm':
+                        map_wrt_B = self.map - self.map[map_ids == origin_id]
+                    else : map_wrt_B = self.map - self.map[origin_id]
 
                     naive_position_accuracy = utils.elementwise_distance(tvecs_wrt_B[cur_id_match_indices], map_wrt_B[map_id_match_indices])
-                    distances_list.append(np.mean(naive_position_accuracy))
+                    distances_list.extend(naive_position_accuracy.tolist())
 
                     # bias = np.mean(tvecs_wrt_B[cur_id_match_indices]-map_wrt_B[map_id_match_indices], axis=0)
                     # position_accuracy_bias_corrected = utils.elementwise_distance(tvecs_wrt_B[cur_id_match_indices]-bias, self.map[map_id_match_indices])
                     # self.position_accuracy_bias_corrected_l.append(np.mean(position_accuracy_bias_corrected))
                 
-                self.naive_position_accuracy_l.append(np.mean(distances_list))
+                self.position_accuracy_list.extend(distances_list)
 
                 orientation_accuracy = utils.angle_error_rowwise(rvecs, np.ones((rvecs.shape[0], 1)) @ mean_rvec.reshape(1, -1))
-                self.orientation_accuracy_list.append(np.mean(orientation_accuracy))
+                self.orientation_accuracy_list.extend(orientation_accuracy.tolist())
+
+        flipped_ids = None
 
         if self.is_ambiguity:
             if (ids is None) or (rvecs is None) or (tvecs is None):
@@ -171,8 +172,7 @@ class Test:
             self.n_of_ambiguity.append(len(flipped_ids))
 
         if self.n_of_frames >= self.max_iter: return True
-        
-        return False
+        else : return False
 
 
     def finalize(self):
@@ -184,13 +184,20 @@ class Test:
 
         if self.is_time:
             time_np = np.array(self.duration_list)
-            self.av_time = np.average(time_np)
-            print('Average proccesing time :', self.av_time,'seconds')
-            self.av_frame_rate = 1/self.av_time
+            av_time = np.average(time_np)
+            print('Average proccesing time :', av_time,'seconds')
+            self.av_frame_rate = 1/av_time
             print('Average frame rate :', self.av_frame_rate, 'frames/seconds')
 
-            write_dict['Average Process Time per Frame [seconds]'] = self.av_time
+            write_dict['Average Process Time per Frame [seconds]'] = av_time
             write_dict['Average Frame Rate [frames/seconds]'] = self.av_frame_rate
+
+            data_dict = utils.boxplot_data(time_np)
+            write_dict['Median Process Time per Frame [seconds]'] = data_dict['median']
+            write_dict['Upper Quartile Process Time per Frame [seconds]'] = data_dict['upper_quartile']
+            write_dict['Lower Quartile Process Time per Frame [seconds]'] = data_dict['lower_quartile']
+            write_dict['Max Process Time per Frame [seconds]'] = data_dict['max']
+            write_dict['Min Quartile Process Time per Frame [seconds]'] = data_dict['min']
 
         if self.is_memory:
             memory_consumption_np = np.array(self.memory_consumption_list)
@@ -201,49 +208,88 @@ class Test:
             write_dict['Average Memory Consumption per Frame [MB/frame]'] = self.average_memory_consumption_MB
 
         if self.is_n_of_detections:
-            print('Average number of detection :', self.av_n_of_detections, 'detections/frame')
+            detection_percents = np.array(self.n_of_detections_list) / (self.array_size[0] * self.array_size[1]) * 100
+            data_dict = utils.boxplot_data(detection_percents)
 
-            write_dict['Average Number of Detection per Frame'] = self.av_n_of_detections
+            print('Average detection percent:', data_dict['average'], '%')
+
+            write_dict['Average Detection Percent'] = data_dict['average']
+            write_dict['Median Detection Percent'] = data_dict['median']
+            write_dict['Upper Quartile Detection Percent'] = data_dict['upper_quartile']
+            write_dict['Lower Quartile Detection Percent'] = data_dict['lower_quartile']
+            write_dict['Max Detection Percent'] = data_dict['max']
+            write_dict['Min Detection Percent'] = data_dict['min']
 
         if self.is_jitter:
-            position_jitters_np = np.array(self.position_jitter_list)
-            self.av_position_jitter = np.average(position_jitters_np)
+            position_jitters_np = np.array(self.position_jitter_list) * 1000 # Converted to mm
+            positional_data_dict = utils.boxplot_data(position_jitters_np)
 
-            orientation_jitters_np = np.array(self.orientation_jitter_list)
-            self.av_orientation_jitter= np.average(orientation_jitters_np)
+            orientation_jitters_np = np.array(self.orientation_jitter_list) * 180 / np.pi
+            orientational_data_dict = utils.boxplot_data(orientation_jitters_np)
 
-            print('Average positional jitter :', self.av_position_jitter, 'meters/(tag*frame) |',self.av_position_jitter*1000, 'milimeters/(tag*frame) |')
-            print('Average orientational jitter :', self.av_orientation_jitter, 'rad/(tag*frame) |', self.av_orientation_jitter*180/np.pi, 'degrees/(tag*frame)')
+            if positional_data_dict is not None and orientational_data_dict is not None:
+                print('Average positional jitter :', positional_data_dict['average'], 'milimeters/(tag*frame) |')
+                print('Average orientational jitter :', orientational_data_dict['average'], 'degrees/(tag*frame)')
 
-            write_dict['Average Positional Jitter per Frame and Tag [mm/(frame*tag)]'] = self.av_position_jitter*1000
-            write_dict['Average Orientational Jitter per Frame and Tag [degrees/(frame*tag)]'] = self.av_orientation_jitter*180/np.pi
+                write_dict['Average Positional Jitter per Frame and Tag [mm/(frame*tag)]'] = positional_data_dict['average']
+                write_dict['Average Orientational Jitter per Frame and Tag [degrees/(frame*tag)]'] = orientational_data_dict['average']
+
+                write_dict['Median Positional Jitter per Frame and Tag [mm/(frame*tag)]'] = positional_data_dict['median']
+                write_dict['Upper Quartile Positional Jitter per Frame and Tag [mm/(frame*tag)]'] = positional_data_dict['upper_quartile']
+                write_dict['Lower Quartile Positional Jitter per Frame and Tag [mm/(frame*tag)]'] = positional_data_dict['lower_quartile']
+                write_dict['Max Positional Jitter per Frame and Tag [mm/(frame*tag)]'] = positional_data_dict['max']
+                write_dict['Min Positional Jitter per Frame and Tag [mm/(frame*tag)]'] = positional_data_dict['min']
+
+                write_dict['Median Orientational Jitter per Frame and Tag [degrees/(frame*tag)]'] = orientational_data_dict['median']
+                write_dict['Upper Orientational Jitter per Frame and Tag [degrees/(frame*tag)]'] = orientational_data_dict['upper_quartile']
+                write_dict['Lower Orientational Jitter per Frame and Tag [degrees/(frame*tag)]'] = orientational_data_dict['lower_quartile']
+                write_dict['Max Orientational Jitter per Frame and Tag [degrees/(frame*tag)]'] = orientational_data_dict['max']
+                write_dict['Min Orientational Jitter per Frame and Tag [degrees/(frame*tag)]'] = orientational_data_dict['min']
 
         if self.is_accuracy:
 
-            position_accuracy_naive_np = np.array(self.naive_position_accuracy_l)
-            self.av_position_accuracy_naive = np.average(position_accuracy_naive_np)
+            position_accuracy_np = np.array(self.position_accuracy_list) * 1000 # in mm
+            positional_acc_data_dict = utils.boxplot_data(position_accuracy_np)
 
             # position_accuracy_bias_corrected_np = np.array(self.position_accuracy_bias_corrected_l)
             # self.av_position_accuracy_bias_corrected = np.average(position_accuracy_bias_corrected_np)
 
-            orientation_accuracy_np = np.array(self.orientation_accuracy_list)
-            self.av_orientation_accuracy= np.average(orientation_accuracy_np)
+            orientation_accuracy_np = np.array(self.orientation_accuracy_list) * 180 / np.pi
+            orientation_acc_data_dict = utils.boxplot_data(orientation_accuracy_np)
 
-            print('Average positional accuracy :', self.av_position_accuracy_naive, 'meters/(tag*frame) |',self.av_position_accuracy_naive*1000, 'milimeters/(tag*frame)')
-            print('Average orientational accuracy :', self.av_orientation_accuracy, 'rad/(tag*frame) |', self.av_orientation_accuracy*180/np.pi, 'degrees/(tag*frame)')
+            if positional_acc_data_dict is not None and orientation_acc_data_dict is not None:
+                print('Average positional accuracy :', positional_acc_data_dict['average'], 'milimeters/(tag*frame)')
+                print('Average orientational accuracy :', orientation_acc_data_dict['average'], 'degrees/(tag*frame)')
 
-            write_dict['Average Naive Positional Accuracy per Frame and Tag [mm/(frame*tag)]'] = self.av_position_accuracy_naive*1000
-            # write_dict['Average Biased Corrected Positional Accuracy per Frame and Tag [mm/(frame*tag)]'] = self.av_position_accuracy_bias_corrected*1000
-            write_dict['Average Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]'] = self.av_orientation_accuracy*180/np.pi
-            write_dict['Array Size'] = self.array_size
+                write_dict['Average Positional Accuracy per Frame and Tag [mm/(frame*tag)]'] = positional_acc_data_dict['average']
+                write_dict['Median Positional Accuracy per Frame and Tag [mm/(frame*tag)]'] = positional_acc_data_dict['median']
+                write_dict['Upper Quartile Positional Accuracy per Frame and Tag [mm/(frame*tag)]'] = positional_acc_data_dict['upper_quartile']
+                write_dict['Lower Quartile Positional Accuracy per Frame and Tag [mm/(frame*tag)]'] = positional_acc_data_dict['lower_quartile']
+                write_dict['Max Positional Accuracy per Frame and Tag [mm/(frame*tag)]'] = positional_acc_data_dict['max']
+                write_dict['Min Positional Accuracy per Frame and Tag [mm/(frame*tag)]'] = positional_acc_data_dict['min']
+
+                write_dict['Average Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]'] = orientation_acc_data_dict['average']
+                write_dict['Median Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]'] = orientation_acc_data_dict['median']
+                write_dict['Upper Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]'] = orientation_acc_data_dict['upper_quartile']
+                write_dict['Lower Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]'] = orientation_acc_data_dict['lower_quartile']
+                write_dict['Max Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]'] = orientation_acc_data_dict['max']
+                write_dict['Min Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]'] = orientation_acc_data_dict['min']
+                # write_dict['Average Biased Corrected Positional Accuracy per Frame and Tag [mm/(frame*tag)]'] = self.av_position_accuracy_bias_corrected*1000
 
         if self.is_ambiguity:
             n_of_ambiguity_np = np.array(self.n_of_ambiguity)
-            ambiguity_percent = np.average(n_of_ambiguity_np) / self.av_n_of_detections * 100
+            ambiguity_percent = (n_of_ambiguity_np / self.n_of_detections_list) * 100
+            data_dict = utils.boxplot_data(ambiguity_percent)
 
-            print('Ambiguety Percent(Number of Flipped Detections/Total Number of Detections) :', ambiguity_percent)
-            
-            write_dict['Ambiguety Percent(Number of Flipped Detections/Total Number of Detections)'] = ambiguity_percent
+            if data_dict is not None:
+                print('Ambiguety Percent(Number of Flipped Detections/Total Number of Detections) :', data_dict['average'])
+                
+                write_dict['Average Ambiguety Percent(Number of Flipped Detections/Number of Detections)'] = data_dict['average']
+                write_dict['Median Ambiguety Percent'] = data_dict['median']
+                write_dict['Upper Ambiguety Percent'] = data_dict['upper_quartile']
+                write_dict['Lower Ambiguety Percent'] = data_dict['lower_quartile']
+                write_dict['Max Ambiguety Percent'] = data_dict['max']
+                write_dict['Min Ambiguety Percent'] = data_dict['min']
             
 
         if self.is_record or utils.user_prompt("Should the data be recorded recorded?"):
@@ -257,22 +303,67 @@ class Test:
 
             write_dict['Test Name'] = self.record_name
             write_dict['Tag Size [cm]'] = self.tag_size*100
+            write_dict['Array Size'] = self.array_size
             write_dict['Total Number of Frames'] = self.n_of_frames
                         
             atributes = ['Test Name',
                         'Tag Size [cm]', 
-                        'Total Number of Frames', 
+                        'Array Size',
+                        'Total Number of Frames',
+
                         'Average Process Time per Frame [seconds]', 
+                        'Median Process Time per Frame [seconds]',
+                        'Upper Quartile Process Time per Frame [seconds]',
+                        'Lower Quartile Process Time per Frame [seconds]',
+                        'Max Process Time per Frame [seconds]',
+                        'Min Quartile Process Time per Frame [seconds]',
+
                         'Average Frame Rate [frames/seconds]',
+
                         'Average Memory Consumption per Frame [MB/frame]' ,
-                        'Average Number of Detection per Frame', 
+
+                        'Average Detection Percent',
+                        'Median Detection Percent',
+                        'Upper Quartile Detection Percent',
+                        'Lower Quartile Detection Percent',
+                        'Max Detection Percent',
+                        'Min Detection Percent',
+
                         'Average Positional Jitter per Frame and Tag [mm/(frame*tag)]', 
+                        'Median Positional Jitter per Frame and Tag [mm/(frame*tag)]',
+                        'Upper Quartile Positional Jitter per Frame and Tag [mm/(frame*tag)]',
+                        'Lower Quartile Positional Jitter per Frame and Tag [mm/(frame*tag)]',
+                        'Max Positional Jitter per Frame and Tag [mm/(frame*tag)]',
+                        'Min Positional Jitter per Frame and Tag [mm/(frame*tag)]',
+
                         'Average Orientational Jitter per Frame and Tag [degrees/(frame*tag)]',
-                        'Array Size', 
-                        'Average Naive Positional Accuracy per Frame and Tag [mm/(frame*tag)]',
-                        'Average Biased Corrected Positional Accuracy per Frame and Tag [mm/(frame*tag)]', 
+                        'Median Orientational Jitter per Frame and Tag [degrees/(frame*tag)]',
+                        'Upper Orientational Jitter per Frame and Tag [degrees/(frame*tag)]',
+                        'Lower Orientational Jitter per Frame and Tag [degrees/(frame*tag)]',
+                        'Max Orientational Jitter per Frame and Tag [degrees/(frame*tag)]',
+                        'Min Orientational Jitter per Frame and Tag [degrees/(frame*tag)]',
+                        
+                        'Average Positional Accuracy per Frame and Tag [mm/(frame*tag)]',
+                        'Median Positional Accuracy per Frame and Tag [mm/(frame*tag)]',
+                        'Upper Quartile Positional Accuracy per Frame and Tag [mm/(frame*tag)]',
+                        'Lower Quartile Positional Accuracy per Frame and Tag [mm/(frame*tag)]',
+                        'Max Positional Accuracy per Frame and Tag [mm/(frame*tag)]',
+                        'Min Positional Accuracy per Frame and Tag [mm/(frame*tag)]',
+
                         'Average Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]',
-                        'Ambiguety Percent(Number of Flipped Detections/Total Number of Detections)']
+                        'Median Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]',
+                        'Upper Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]',
+                        'Lower Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]',
+                        'Max Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]',
+                        'Min Orientational Accuracy per Frame and Tag [degrees/(frame*tag)]',
+
+                        # 'Average Biased Corrected Positional Accuracy per Frame and Tag [mm/(frame*tag)]', 
+                        'Average Ambiguety Percent(Number of Flipped Detections/Number of Detections)',
+                        'Median Ambiguety Percent',
+                        'Upper Ambiguety Percent',
+                        'Lower Ambiguety Percent',
+                        'Max Ambiguety Percent',
+                        'Min Ambiguety Percent']
 
             if not Path(filepath).exists():
                 print('New csv file created :', filepath)

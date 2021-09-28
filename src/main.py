@@ -19,7 +19,7 @@ def fiducial_markers(detector = "apriltag", tag_size = 0.16, is_visualize = True
 	else: is_accuracy = True
 
 	if is_test:
-		if platform.system() == 'Linux': tester = test.Test(tag_size = tag_size, is_record = is_record, record_name=dataset_name)  #Linux
+		if platform.system() == 'Linux': tester = test.Test(tag_size = tag_size, is_record = is_record, record_name=dataset_name, is_accuracy=is_accuracy)  #Linux
 		else: tester = test.Test(tag_size = tag_size, is_memory = False, is_record=is_record,record_name=dataset_name, is_accuracy=is_accuracy)  #Windows
 
 	calib_mtx, dist_coef = utils.getCalibData(calib_file_name)
@@ -86,10 +86,30 @@ def fiducial_markers(detector = "apriltag", tag_size = 0.16, is_visualize = True
 	if is_test: tester.finalize()
 
 if __name__ == "__main__":
-	fiducial_markers(detector = "charuco", tag_size = 0.16, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'charuco_16cm', calib_file_name = "d415_200921_matlab.npz")
-	fiducial_markers(detector = "charuco", tag_size = 0.08, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'charuco_8cm', calib_file_name = "d415_200921_matlab.npz")
-	fiducial_markers(detector = "charuco", tag_size = 0.04, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'charuco_4cm', calib_file_name = "d415_200921_matlab.npz")
-	fiducial_markers(detector = "charuco", tag_size = 0.02, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'charuco_2cm', calib_file_name = "d415_200921_matlab.npz")
-	fiducial_markers(detector = "charuco", tag_size = 0.01, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'charuco_1cm', calib_file_name = "d415_200921_matlab.npz")
-	fiducial_markers(detector = "charuco", tag_size = 0.005, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'charuco_05cm', calib_file_name = "d415_200921_matlab.npz")
+	# fiducial_markers(detector = "charuco", tag_size = 0.16, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'charuco_16cm', calib_file_name = "d415_200921_matlab.npz")
+	# fiducial_markers(detector = "charuco", tag_size = 0.08, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'charuco_8cm', calib_file_name = "d415_200921_matlab.npz")
+	# fiducial_markers(detector = "charuco", tag_size = 0.04, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'charuco_4cm', calib_file_name = "d415_200921_matlab.npz")
+	# fiducial_markers(detector = "charuco", tag_size = 0.02, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'charuco_2cm', calib_file_name = "d415_200921_matlab.npz")
+	# fiducial_markers(detector = "charuco", tag_size = 0.01, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'charuco_1cm', calib_file_name = "d415_200921_matlab.npz")
+	# fiducial_markers(detector = "charuco", tag_size = 0.005, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'charuco_05cm', calib_file_name = "d415_200921_matlab.npz")
+	
+	fiducial_markers(detector = "aruco", tag_size = 0.16, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'aruco_16cm', calib_file_name = "d415_200921_matlab.npz")
+	fiducial_markers(detector = "aruco", tag_size = 0.08, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'aruco_8cm', calib_file_name = "d415_200921_matlab.npz")
+	fiducial_markers(detector = "aruco", tag_size = 0.04, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'aruco_4cm', calib_file_name = "d415_200921_matlab.npz")
+	fiducial_markers(detector = "aruco", tag_size = 0.02, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'aruco_2cm', calib_file_name = "d415_200921_matlab.npz")
+	fiducial_markers(detector = "aruco", tag_size = 0.01, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'aruco_1cm', calib_file_name = "d415_200921_matlab.npz")
+	fiducial_markers(detector = "aruco", tag_size = 0.005, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'aruco_05cm', calib_file_name = "d415_200921_matlab.npz")
 
+	fiducial_markers(detector = "stag", tag_size = 0.16, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'stag_16cm', calib_file_name = "d415_200921_matlab.npz")
+	fiducial_markers(detector = "stag", tag_size = 0.08, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'stag_8cm', calib_file_name = "d415_200921_matlab.npz")
+	fiducial_markers(detector = "stag", tag_size = 0.04, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'stag_4cm', calib_file_name = "d415_200921_matlab.npz")
+	fiducial_markers(detector = "stag", tag_size = 0.02, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'stag_2cm', calib_file_name = "d415_200921_matlab.npz")
+	fiducial_markers(detector = "stag", tag_size = 0.01, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'stag_1cm', calib_file_name = "d415_200921_matlab.npz")
+	fiducial_markers(detector = "stag", tag_size = 0.005, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'stag_05cm', calib_file_name = "d415_200921_matlab.npz")
+
+	fiducial_markers(detector = "apriltag", tag_size = 0.16, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'apriltag_16cm', calib_file_name = "d415_200921_matlab.npz")
+	fiducial_markers(detector = "apriltag", tag_size = 0.08, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'apriltag_8cm', calib_file_name = "d415_200921_matlab.npz")
+	fiducial_markers(detector = "apriltag", tag_size = 0.04, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'apriltag_4cm', calib_file_name = "d415_200921_matlab.npz")
+	fiducial_markers(detector = "apriltag", tag_size = 0.02, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'apriltag_2cm', calib_file_name = "d415_200921_matlab.npz")
+	fiducial_markers(detector = "apriltag", tag_size = 0.01, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'apriltag_1cm', calib_file_name = "d415_200921_matlab.npz")
+	fiducial_markers(detector = "apriltag", tag_size = 0.005, is_visualize = True, is_test = True, use_camera = False,dataset_name = 'apriltag_05cm', calib_file_name = "d415_200921_matlab.npz")

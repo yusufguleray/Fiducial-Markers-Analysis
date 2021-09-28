@@ -205,7 +205,10 @@ def charuco_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visu
             indices = (tag_ids >= 18 * i) & (tag_ids < (18 * (i + 1)))
 
             if np.any(indices == True): 
-                cur_corners = corners[indices].squeeze().astype(np.float32)
+                
+                if use_april_detecotor : cur_corners = corners[indices].squeeze().astype(np.float32)
+                else : cur_corners = corners[indices]
+
                 cur_ids = tag_ids[indices] - 18 * i
 
                 ret1, c_corners, c_ids = cv2.aruco.interpolateCornersCharuco(cur_corners, cur_ids, img_gray, charUcoBoard)
@@ -220,6 +223,11 @@ def charuco_detector(img_rgb, img_gray, calib_mtx, dist_coef, tag_size = 1, visu
                     tvecs.append(p_tvec.squeeze())
                     if visualize == True:
                         img_rgb = utils.drawCube(img_rgb, p_rvec, p_tvec, calib_mtx, dist_coef, cube_color, tag_size, is_centered=False)
+                        c_ids = np.array(c_ids)
+                        if np.count_nonzero(np.in1d(c_ids, np.array([0,4,20,24]))) ==4:
+                            char_corners = c_corners[np.in1d(c_ids, np.array([0,4,20,24]))].squeeze().astype(np.float32).reshape((1,4,2))
+                            char_corners = np.array([char_corners])
+                            img_rgb = cv2.aruco.drawDetectedMarkers(img_rgb, char_corners, np.array([i]))
                         cv2.aruco.drawAxis(img_rgb, calib_mtx, dist_coef, p_rvec, p_tvec, tag_size)
 
         if len(ids) == 0 : return img_rgb, None
