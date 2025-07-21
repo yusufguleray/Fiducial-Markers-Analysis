@@ -22,3 +22,23 @@ A dataset containing 100 images for each size and type of marker can be found in
 # Contact
 
 If you find any bugs or have any questions about the code, please report to the Issues page.
+
+
+## 📚 Citation
+
+If you use this dataset in your research or publication, please cite it as:
+
+**Yusuf Ziya Güleray**. *Fiducial Markers Analysis Dataset*. GitHub. [https://github.com/yusufguleray/Fiducial-Markers-Analysis](https://github.com/yusufguleray/Fiducial-Markers-Analysis). 2025. Licensed under aGPLv3.
+
+For questions or collaborations, feel free to contact me at 📧 yzguleray@gmail.com.
+
+### 📖 BibTeX
+
+```bibtex
+@misc{guleray2025fiducial,
+  author       = {Yusuf Ziya Güleray},
+  title        = {Fiducial Markers Analysis Dataset},
+  year         = {2025},
+  howpublished = {\url{https://github.com/yusufguleray/Fiducial-Markers-Analysis}},
+  note         = {Dataset licensed under aGPLv3}
+}
